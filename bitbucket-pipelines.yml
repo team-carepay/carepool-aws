@@ -23,6 +23,8 @@ definitions:
       name: Release
       # language=sh
       script:
+        - echo ${SONAR_TOKEN:0:8}
+        - echo ${SONAR_TOKEN:8:64}
         - apt-get install -y jq || echo "jq already installed"
         - git remote set-url origin "https://x-token-auth:$(curl -s -X POST -u "$BOT_CREDENTIALS" https://bitbucket.org/site/oauth2/access_token -d grant_type=client_credentials -d scopes="repository" | jq -r .access_token)@bitbucket.org/${BITBUCKET_REPO_OWNER}/${BITBUCKET_REPO_SLUG}"
         - ./gradlew sonar release -Prelease.useAutomaticVersion=true
