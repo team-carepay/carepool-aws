@@ -1,0 +1,35 @@
+definitions:
+  caches:
+    gradle-wrapper: ~/.gradle/wrapper
+    gradle-notifications: ~/.gradle/notifications
+    sonar: ~/.sonar/cache
+  common-caches: &common-caches
+    caches:
+      - gradle
+      - gradle-wrapper
+      - gradle-notifications
+      - sonar
+  steps:
+    - &build
+      <<: *common-caches
+      name: Build
+      # language=sh
+      script:
+        - ./gradlew build sonar
+      artifacts:
+        - build/**
+    - &release
+      <<: *common-caches
+      name: Release
+      # language=sh
+      script:
+        - apt-get install -y jq || echo "jq already installed"
+        - git remote set-url origin "https://x-token-auth:$(curl -s -X POST -u "$BOT_CREDENTIALS" https://bitbucket.org/site/oauth2/access_token -d grant_type=client_credentials -d scopes="repository" | jq -r .access_token)@bitbucket.org/${BITBUCKET_REPO_OWNER}/${BITBUCKET_REPO_SLUG}"
+        - ./gradlew sonar release -Prelease.useAutomaticVersion=true
+
+pipelines:
+  default:
+    - step: *build
+  branches:
+    master:
+      - step: *release
