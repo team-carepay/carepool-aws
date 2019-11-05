@@ -83,13 +83,14 @@ public class ProfileAWSCredentialsProviderTest {
     }
 
     @Test
-    public void testRefresh() throws IOException {
+    public void testRefresh() throws IOException, InterruptedException {
         Clock clock = mock(Clock.class);
         when(clock.instant()).thenReturn(
                 Instant.parse("2015-08-30T12:36:00.00Z"),
                 Instant.parse("2016-08-30T12:36:00.00Z"));
         credentialsProvider = new ProfileAWSCredentialsProvider(clock);
         AWSCredentials credentials = credentialsProvider.getCredentials();
+        Thread.sleep(1000L); // to ensure the last-modified timestamp is later
         saveCredentials("/credentials2");
         AWSCredentials credentials2 = credentialsProvider.getCredentials();
         assertThat(credentials2.getAccessKeyId()).isEqualTo("SECOND_CREDZ");
