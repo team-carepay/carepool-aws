@@ -32,6 +32,7 @@ public class EC2 {
     private static final String EC2_NAMESPACE = "http://ec2.amazonaws.com/doc/2016-11-15/";
     private static final String INSTANCE_IDENTITY_DOCUMENT_URL = "http://169.254.169.254/latest/dynamic/instance-identity/document";
     private static Map<String, String> metaData;
+    public static URLOpener defaultOpener = URLOpener.DEFAULT;
 
     static {
         try {
@@ -66,7 +67,7 @@ public class EC2 {
 
     public static Map<String, String> getMetaData() {
         if (metaData == null) {
-            metaData = queryMetaData(META_DATA_URL, URLOpener.DEFAULT);
+            metaData = queryMetaData(META_DATA_URL, defaultOpener);
         }
         return metaData;
     }
