@@ -7,7 +7,6 @@ import java.security.InvalidKeyException;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.time.Clock;
-import java.time.Instant;
 import java.time.format.DateTimeFormatter;
 import java.util.Map;
 import java.util.WeakHashMap;
@@ -114,10 +113,6 @@ public class AWS4Signer {
         return result.toString();
     }
 
-    protected Instant getCurrentDateTime() {
-        return clock.instant();
-    }
-
     /**
      * Adds AWS4 headers to the request.
      *
@@ -171,7 +166,7 @@ public class AWS4Signer {
         final AWSCredentials credentials = credentialsProvider.getCredentials();
         final String[] parts = host.split("\\."); // e.g. xxxx.yyyy.eu-west-1.rds.amazonaws.com
         final String region = parts[2]; // extract region from hostname
-        final String dateTimeStr = AWS_DATE_FMT.format(getCurrentDateTime());
+        final String dateTimeStr = AWS_DATE_FMT.format(clock.instant());
         final String dateStr = dateTimeStr.substring(0, 8);
         final String scope = String.join("/", dateStr, region, RDS_DB, AWS_4_REQUEST);
         final StringBuilder queryBuilder = new StringBuilder("Action=connect")
