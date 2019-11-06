@@ -47,7 +47,7 @@ public class EC2 {
     private XPath xpath;
 
     public EC2() {
-        this(new AWS4Signer(), URLOpener.DEFAULT);
+        this(new AWS4Signer(), defaultOpener);
     }
 
     public EC2(final AWS4Signer signer, final URLOpener opener) {
