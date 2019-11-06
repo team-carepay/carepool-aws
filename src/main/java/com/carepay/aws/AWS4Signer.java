@@ -41,9 +41,10 @@ public class AWS4Signer {
 
     protected final Clock clock;
     protected final AWSCredentialsProvider credentialsProvider;
+    public static AWSCredentialsProvider defaultCredentialsProvider = new DefaultAWSCredentialsProviderChain();
 
     public AWS4Signer() {
-        this(Clock.systemUTC(),new DefaultAWSCredentialsProviderChain());
+        this(Clock.systemUTC(),defaultCredentialsProvider);
     }
 
     public AWS4Signer(Clock clock, AWSCredentialsProvider credentialsProvider) {
