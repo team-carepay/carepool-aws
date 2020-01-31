@@ -5,16 +5,15 @@ plugins {
     id 'checkstyle'
     id 'org.sonarqube' version '2.7.1'
     id 'net.researchgate.release' version '2.8.1'
+    id 'net.ltgt.errorprone' version '1.1.1'
 }
 
 group = 'com.carepay'
 
-sourceCompatibility = 1.8
-targetCompatibility = 1.8
-
-configurations {
-    checkstyleConfig
-    testImplementation.extendsFrom compileOnly
+java {
+    withSourcesJar()
+    sourceCompatibility = JavaVersion.VERSION_1_8
+    targetCompatibility = JavaVersion.current()
 }
 
 repositories {
@@ -34,19 +33,14 @@ dependencies {
     testImplementation 'org.assertj:assertj-core:3.13.2'
     testImplementation 'org.mockito:mockito-core:2.28.2'
 
-    checkstyleConfig 'ke.co.carepay:checkstyle:1.0@xml'
-}
-
-task sourcesJar(type: Jar) {
-    archiveClassifier = 'sources'
-    from sourceSets.main.allJava
+    errorprone 'com.google.errorprone:error_prone_core:2.3.4'
+    errorproneJavac 'com.google.errorprone:javac:9+181-r4173-1'
 }
 
 publishing {
     publications {
         mavenJava(MavenPublication) {
             from components.java
-            artifact sourcesJar
         }
     }
     repositories {
@@ -60,13 +54,22 @@ publishing {
 }
 
 checkstyle {
-    configFile configurations.checkstyleConfig.files.first()
+    config = project.resources.text.fromUri('https://carepaydev.bitbucket.io/checkstyle-1.1.xml')
 }
 
+tasks.sonarqube.dependsOn tasks.jacocoTestReport
+jacocoTestReport {
+    reports {
+        xml.enabled true
+    }
+}
 
 release {
     tagCommitMessage = 'Release tag [skip ci]'
     newVersionCommitMessage = 'New version [skip ci]'
+    git {
+        requireBranch = ''
+    }
 }
 
 afterReleaseBuild.dependsOn publish

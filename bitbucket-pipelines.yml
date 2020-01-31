@@ -1,17 +1,28 @@
+image: atlassian/default-image:2
+
+clone:
+  depth: full
+
 definitions:
   caches:
     gradle-wrapper: ~/.gradle/wrapper
     gradle-notifications: ~/.gradle/notifications
     sonar: ~/.sonar/cache
-  common-caches: &common-caches
+  common-caches: &caches
     caches:
       - gradle
       - gradle-wrapper
       - gradle-notifications
       - sonar
   steps:
+    - &check
+      <<: *caches
+      name: Check
+      # language=sh
+      script:
+        - ./gradlew check sonar
     - &build
-      <<: *common-caches
+      <<: *caches
       name: Build
       # language=sh
       script:
@@ -19,19 +30,23 @@ definitions:
       artifacts:
         - build/**
     - &release
-      <<: *common-caches
+      <<: *caches
       name: Release
       # language=sh
       script:
-        - echo ${SONAR_TOKEN:0:8}
-        - echo ${SONAR_TOKEN:8:64}
-        - apt-get install -y jq || echo "jq already installed"
         - git remote set-url origin "https://x-token-auth:$(curl -s -X POST -u "$BOT_CREDENTIALS" https://bitbucket.org/site/oauth2/access_token -d grant_type=client_credentials -d scopes="repository" | jq -r .access_token)@bitbucket.org/${BITBUCKET_REPO_OWNER}/${BITBUCKET_REPO_SLUG}"
         - ./gradlew sonar release -Prelease.useAutomaticVersion=true
 
 pipelines:
-  default:
-    - step: *build
   branches:
     master:
+      - step: *release
+  pull-requests:
+    '**':
+      - step: *check
+  custom:
+    release:
+      - variables:
+          - name: RELEASE_VERSION
+          - name: NEW_VERSION
       - step: *release
