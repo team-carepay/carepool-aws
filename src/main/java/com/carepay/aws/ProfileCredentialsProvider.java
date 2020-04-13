@@ -7,6 +7,7 @@ import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
 import java.util.Optional;
 
+import com.carepay.aws.util.Env;
 import com.carepay.aws.util.IniFile;
 
 import static java.time.ZoneOffset.UTC;
@@ -31,13 +32,13 @@ public class ProfileCredentialsProvider implements CredentialsProvider {
     private long lastModified;
 
     public ProfileCredentialsProvider() {
-        this(new File(new File(System.getProperty(USER_HOME)), AWS_CREDENTIALS), Clock.systemUTC());
+        this(new File(new File(System.getProperty(USER_HOME)), AWS_CREDENTIALS), Clock.systemUTC(), Env.DEFAULT);
     }
 
-    public ProfileCredentialsProvider(final File profileFile, final Clock clock) {
+    public ProfileCredentialsProvider(final File profileFile, final Clock clock, final Env env) {
         this.profileFile = profileFile;
         this.clock = clock;
-        this.profileName = Optional.ofNullable(System.getenv(AWS_PROFILE))
+        this.profileName = Optional.ofNullable(env.getEnv(AWS_PROFILE))
                 .orElseGet(() -> Optional.ofNullable(System.getProperty("aws.profile")).orElse(DEFAULT));
         expirationTime = LocalDateTime.MIN;
     }

@@ -23,7 +23,7 @@ public class ProfileRegionProviderTest {
 
     @Before
     public void setUp() throws URISyntaxException {
-        this.provider = new ProfileRegionProvider(PROFILE_FILE, CLOCK);
+        this.provider = new ProfileRegionProvider(PROFILE_FILE, CLOCK, n -> null);
     }
 
     @Test
@@ -54,7 +54,7 @@ public class ProfileRegionProviderTest {
                 Instant.parse("2017-08-30T12:36:00.00Z"));
         File profileFile = spy(new File(getClass().getResource("/homedir/.aws/config").toURI()));
         when(profileFile.exists()).thenReturn(false, true);
-        ProfileRegionProvider regionProvider = new ProfileRegionProvider(profileFile, clock);
+        ProfileRegionProvider regionProvider = new ProfileRegionProvider(profileFile, clock, n -> null);
         assertThat(regionProvider.getRegion()).isNull();
         assertThat(regionProvider.getRegion()).isEqualTo("eu-west-1");
         assertThat(regionProvider.getRegion()).isEqualTo("eu-west-1");
@@ -69,7 +69,7 @@ public class ProfileRegionProviderTest {
                 Instant.parse("2017-08-30T12:36:00.00Z"));
         File profileFile = spy(new File(getClass().getResource("/homedir/.aws/config").toURI()));
         when(profileFile.lastModified()).thenReturn(1L, 1L, 2L);
-        ProfileRegionProvider provider = new ProfileRegionProvider(profileFile, clock);
+        ProfileRegionProvider provider = new ProfileRegionProvider(profileFile, clock, n -> null);
         provider.getRegion();
         provider.getRegion();
         provider.getRegion();

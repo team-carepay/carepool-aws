@@ -18,6 +18,7 @@ public class EnvironmentRegionProvider implements RegionProvider {
 
     @Override
     public String getRegion() {
-        return env.getEnv("AWS_REGION");
+        final String region = env.getEnv("AWS_DEFAULT_REGION");
+        return region != null ? region : env.getEnv("AWS_REGION");
     }
 }

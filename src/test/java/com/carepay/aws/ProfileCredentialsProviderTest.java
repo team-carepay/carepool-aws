@@ -18,7 +18,7 @@ public class ProfileCredentialsProviderTest {
 
     @Before
     public void setUp() {
-        credentialsProvider = new ProfileCredentialsProvider(CREDENTIALS_FILE, CLOCK);
+        credentialsProvider = new ProfileCredentialsProvider(CREDENTIALS_FILE, CLOCK, n -> null);
     }
 
     @Test
@@ -34,7 +34,7 @@ public class ProfileCredentialsProviderTest {
         String oldAwsProfile = System.getProperty("aws.profile");
         try {
             System.setProperty("aws.profile", "alternative");
-            assertThat(new ProfileCredentialsProvider(CREDENTIALS_FILE, CLOCK).getCredentials().getAccessKeyId()).isEqualTo("AKIDEXAMPLE2");
+            assertThat(new ProfileCredentialsProvider(CREDENTIALS_FILE, CLOCK, n -> null).getCredentials().getAccessKeyId()).isEqualTo("AKIDEXAMPLE2");
         } finally {
             if (oldAwsProfile != null) {
                 System.setProperty("aws.profile", oldAwsProfile);
