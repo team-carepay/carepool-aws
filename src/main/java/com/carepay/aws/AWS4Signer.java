@@ -250,8 +250,7 @@ public class AWS4Signer {
             queryParams.put("X-Amz-SignedHeaders", String.join(";", signedHeaders.keySet()).toLowerCase());
             final String stringToSign = getStringToSign(SHA256.hash((byte[]) null));
             final byte[] signature = SHA256.sign(stringToSign, getSigningKey(credentials, service, region, dateStr));
-            queryParams.put("X-Amz-Signature", Hex.encode(signature));
-            return url.getHost() + ":" + url.getPort() + url.getPath() + "?" + QueryStringUtils.toQueryString(queryParams);
+            return url.getHost() + ":" + url.getPort() + url.getPath() + "?" + QueryStringUtils.toQueryString(queryParams) + "&X-Amz-Signature=" + Hex.encode(signature);
         }
     }
 
