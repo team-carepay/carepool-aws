@@ -1,6 +1,6 @@
 package com.carepay.aws.ec2;
 
-import com.carepay.aws.RegionProvider;
+import com.carepay.aws.auth.RegionProvider;
 
 /**
  * EC2 implementation of AWS region provider. (using http://169.254.169.254/latest/meta-data)

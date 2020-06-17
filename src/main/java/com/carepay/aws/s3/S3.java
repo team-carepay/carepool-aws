@@ -16,8 +16,8 @@ import javax.xml.xpath.XPathExpression;
 import javax.xml.xpath.XPathExpressionException;
 import javax.xml.xpath.XPathFactory;
 
-import com.carepay.aws.AWS4Signer;
-import com.carepay.aws.RegionProvider;
+import com.carepay.aws.auth.AWS4Signer;
+import com.carepay.aws.auth.RegionProvider;
 import com.carepay.aws.util.SimpleNamespaceContext;
 import com.carepay.aws.util.URLOpener;
 import org.xml.sax.InputSource;

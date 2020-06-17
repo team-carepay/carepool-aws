@@ -1,5 +1,6 @@
-package com.carepay.aws;
+package com.carepay.aws.region;
 
+import com.carepay.aws.auth.RegionProvider;
 import com.carepay.aws.util.Env;
 
 /**

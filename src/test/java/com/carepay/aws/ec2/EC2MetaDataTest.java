@@ -18,7 +18,7 @@ public class EC2MetaDataTest {
     public void testGetInstanceId() throws IOException {
         HttpURLConnection uc = mock(HttpURLConnection.class);
         when(uc.getInputStream()).thenReturn(getClass().getResourceAsStream("/metadata.json"));
-        EC2MetaData ec2metadata = new EC2MetaData(url -> uc);
+        EC2MetaData ec2metadata = new EC2MetaData(new ResourceFetcher(url -> uc));
         assertThat(ec2metadata.getInstanceId()).isEqualTo("i-05c52026d927fee31");
     }
 
@@ -37,7 +37,7 @@ public class EC2MetaDataTest {
     public void testQueryMetadataIOException() throws IOException {
         HttpURLConnection uc = mock(HttpURLConnection.class);
         when(uc.getInputStream()).thenThrow(new IOException("test"));
-        EC2MetaData ec2metadata = new EC2MetaData(url -> uc);
+        EC2MetaData ec2metadata = new EC2MetaData(new ResourceFetcher(url -> uc));
         assertThat(ec2metadata.queryMetaData(new URL("https://localhost"))).isEmpty();
     }
 
@@ -46,7 +46,7 @@ public class EC2MetaDataTest {
         HttpURLConnection uc = mock(HttpURLConnection.class);
         when(uc.getErrorStream()).thenReturn(new ByteArrayInputStream(new byte[]{}));
         when(uc.getResponseCode()).thenReturn(400);
-        EC2MetaData ec2metadata = new EC2MetaData(url -> uc);
+        EC2MetaData ec2metadata = new EC2MetaData(new ResourceFetcher(url -> uc));
         assertThat(ec2metadata.queryMetaDataAsString(new URL("https://localhost"))).isNull();
     }
 
@@ -54,7 +54,7 @@ public class EC2MetaDataTest {
     public void testQueryMetadataAsStringIOException() throws IOException {
         HttpURLConnection uc = mock(HttpURLConnection.class);
         when(uc.getInputStream()).thenThrow(new IOException("test"));
-        EC2MetaData ec2metadata = new EC2MetaData(url -> uc);
+        EC2MetaData ec2metadata = new EC2MetaData(new ResourceFetcher(url -> uc));
         assertThat(ec2metadata.queryMetaDataAsString(new URL("https://localhost"))).isNull();
     }
 

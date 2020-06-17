@@ -1,4 +1,4 @@
-package com.carepay.aws;
+package com.carepay.aws.auth;
 
 import java.net.HttpURLConnection;
 import java.net.MalformedURLException;
@@ -9,6 +9,7 @@ import java.util.Map;
 import java.util.TreeMap;
 import java.util.WeakHashMap;
 
+import com.carepay.aws.region.DefaultRegionProviderChain;
 import com.carepay.aws.util.Hex;
 import com.carepay.aws.util.QueryStringUtils;
 import com.carepay.aws.util.SHA256;
@@ -34,6 +35,7 @@ public class AWS4Signer {
             .withZone(UTC);
     private static final String AWS_4_HMAC_SHA_256 = "AWS4-HMAC-SHA256";
     private static final String UNSIGNED_PAYLOAD = "UNSIGNED-PAYLOAD";
+    private static final String AMZ_SECURITY_TOKEN = "X-Amz-Security-Token";
 
     protected final Clock clock;
     protected final CredentialsProvider credentialsProvider;
@@ -43,7 +45,7 @@ public class AWS4Signer {
      * Creates a new AWS4Signer
      */
     public AWS4Signer() {
-        this(new DefaultCredentialsProviderChain(), new DefaultRegionProviderChain(), Clock.systemUTC());
+        this(DefaultCredentialsProviderChain.getInstance(), DefaultRegionProviderChain.getInstance(), Clock.systemUTC());
     }
 
     /**
@@ -126,6 +128,7 @@ public class AWS4Signer {
 
         @Override
         public void disconnect() {
+            // not needed for DB wrapper
         }
 
         @Override
@@ -135,6 +138,7 @@ public class AWS4Signer {
 
         @Override
         public void connect() {
+            // not needed for DB wrapper
         }
     }
 
@@ -223,12 +227,12 @@ public class AWS4Signer {
                 final String contentSha256 = length < 0 ? UNSIGNED_PAYLOAD : SHA256.hash(payload, offset, length);
                 signedHeaders.put("X-Amz-Content-SHA256", contentSha256);
                 if (this.credentials.hasToken()) {
-                    signedHeaders.put("X-Amz-Security-Token", this.credentials.getToken());
+                    signedHeaders.put(AMZ_SECURITY_TOKEN, this.credentials.getToken());
                 }
                 return contentSha256;
             } else {
                 if (this.credentials.hasToken()) {
-                    urlConnection.setRequestProperty("X-Amz-Security-Token", this.credentials.getToken());
+                    urlConnection.setRequestProperty(AMZ_SECURITY_TOKEN, this.credentials.getToken());
                 }
                 return SHA256.hash(payload, offset, length);
             }
@@ -240,12 +244,12 @@ public class AWS4Signer {
          * @return the signed query
          */
         public String signQuery() {
-            queryParams.put("X-Amz-Algorithm", "AWS4-HMAC-SHA256");
+            queryParams.put("X-Amz-Algorithm", AWS_4_HMAC_SHA_256);
             queryParams.put("X-Amz-Credential", credentials.getAccessKeyId() + "/" + scope);
             queryParams.put("X-Amz-Date", dateTimeStr);
             queryParams.put("X-Amz-Expires", "900");
             if (credentials.hasToken()) {
-                queryParams.put("X-Amz-Security-Token", credentials.getToken());
+                queryParams.put(AMZ_SECURITY_TOKEN, credentials.getToken());
             }
             queryParams.put("X-Amz-SignedHeaders", String.join(";", signedHeaders.keySet()).toLowerCase());
             final String stringToSign = getStringToSign(SHA256.hash((byte[]) null));

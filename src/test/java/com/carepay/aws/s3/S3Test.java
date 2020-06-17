@@ -9,8 +9,8 @@ import java.time.Clock;
 import java.time.Instant;
 import javax.xml.xpath.XPathFactory;
 
-import com.carepay.aws.AWS4Signer;
-import com.carepay.aws.Credentials;
+import com.carepay.aws.auth.AWS4Signer;
+import com.carepay.aws.auth.Credentials;
 import org.junit.Before;
 import org.junit.Test;
 

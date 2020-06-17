@@ -1,4 +1,4 @@
-package com.carepay.aws;
+package com.carepay.aws.region;
 
 import org.junit.Test;
 

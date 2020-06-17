@@ -7,8 +7,8 @@ import java.net.URL;
 import java.time.Clock;
 import java.time.Instant;
 
-import com.carepay.aws.AWS4Signer;
-import com.carepay.aws.Credentials;
+import com.carepay.aws.auth.AWS4Signer;
+import com.carepay.aws.auth.Credentials;
 import org.junit.Test;
 
 import static java.time.ZoneOffset.UTC;

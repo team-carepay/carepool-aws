@@ -1,4 +1,4 @@
-package com.carepay.aws;
+package com.carepay.aws.auth;
 
 import java.util.Properties;
 

@@ -1,4 +1,4 @@
-package com.carepay.aws;
+package com.carepay.aws.auth;
 
 import java.util.Optional;
 
@@ -24,7 +24,8 @@ public class EnvironmentCredentialsProvider implements CredentialsProvider {
         return new Credentials(
                 env.getEnv("AWS_ACCESS_KEY_ID"),
                 Optional.ofNullable(env.getEnv("AWS_SECRET_ACCESS_KEY")).orElseGet(() -> env.getEnv("AWS_SECRET_KEY")),
-                Optional.ofNullable(env.getEnv("AWS_SESSION_TOKEN")).orElseGet(() -> env.getEnv("AWS_TOKEN"))
+                Optional.ofNullable(env.getEnv("AWS_SESSION_TOKEN")).orElseGet(() -> env.getEnv("AWS_TOKEN")),
+                env.getEnv("AWS_EXPIRATION")
         );
     }
 }

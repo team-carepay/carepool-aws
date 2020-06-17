@@ -1,5 +1,6 @@
-package com.carepay.aws;
+package com.carepay.aws.region;
 
+import com.carepay.aws.auth.RegionProvider;
 import com.carepay.aws.ec2.EC2RegionProvider;
 
 /**
@@ -7,6 +8,7 @@ import com.carepay.aws.ec2.EC2RegionProvider;
  * SystemProperties, Profile config file or EC2 meta-data.
  */
 public class DefaultRegionProviderChain implements RegionProvider {
+    private static final RegionProvider INSTANCE = new DefaultRegionProviderChain();
     private final RegionProvider[] providers;
 
     public DefaultRegionProviderChain() {
@@ -18,6 +20,10 @@ public class DefaultRegionProviderChain implements RegionProvider {
 
     public DefaultRegionProviderChain(RegionProvider... providers) {
         this.providers = providers;
+    }
+
+    public static RegionProvider getInstance() {
+        return INSTANCE;
     }
 
     @Override

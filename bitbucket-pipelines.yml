@@ -6,14 +6,10 @@ clone:
 definitions:
   caches:
     gradle-wrapper: ~/.gradle/wrapper
-    gradle-notifications: ~/.gradle/notifications
-    sonar: ~/.sonar/cache
   common-caches: &caches
     caches:
       - gradle
       - gradle-wrapper
-      - gradle-notifications
-      - sonar
   steps:
     - &check
       <<: *caches
@@ -34,10 +30,12 @@ definitions:
       name: Release
       # language=sh
       script:
-        - git remote set-url origin "https://x-token-auth:$(curl -s -X POST -u "$BOT_CREDENTIALS" https://bitbucket.org/site/oauth2/access_token -d grant_type=client_credentials -d scopes="repository" | jq -r .access_token)@bitbucket.org/${BITBUCKET_REPO_OWNER}/${BITBUCKET_REPO_SLUG}"
-        - ./gradlew sonar release -Prelease.useAutomaticVersion=true
+        - git remote set-url origin $BITBUCKET_GIT_SSH_ORIGIN
+        - ./gradlew sonar release -Prelease.releaseVersion=$RELEASE_VERSION -Prelease.newVersion=$NEW_VERSION
 
 pipelines:
+  default:
+    - step: *check
   branches:
     master:
       - step: *release

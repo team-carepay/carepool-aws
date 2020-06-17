@@ -17,12 +17,12 @@ public class IniFile {
     private File file;
     private Map<String, Map<String, String>> multimap = new HashMap<>();
 
-    public IniFile(File file) throws IOException {
+    public IniFile(File file) {
         this.file = file;
         read();
     }
 
-    protected void read() throws IOException {
+    protected void read() {
         try (BufferedReader br = Files.newBufferedReader(file.toPath(), UTF_8)) {
             String line;
             String section = null;
@@ -30,7 +30,7 @@ public class IniFile {
                 line = line.trim();
                 if (line.length() >= 3 && !line.startsWith("#")) {
                     if (line.startsWith("[")) {
-                        section = line.substring(1, line.length() - 1);
+                        section = line.substring(line.startsWith("[profile ") ? 9 : 1, line.length() - 1);
                     } else {
                         int pos = line.indexOf('=');
                         if (pos > 0) {
@@ -41,10 +41,16 @@ public class IniFile {
                     }
                 }
             }
+        } catch (IOException e) { // NOSONAR
+            // ignore
         }
     }
 
     public String getString(String section, String key) {
         return multimap.getOrDefault(section, Collections.emptyMap()).get(key);
+    }
+
+    public Map<String, String> getSection(String section) {
+        return multimap.get(section);
     }
 }

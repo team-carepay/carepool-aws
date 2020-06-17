@@ -13,9 +13,9 @@ import javax.xml.xpath.XPathExpression;
 import javax.xml.xpath.XPathExpressionException;
 import javax.xml.xpath.XPathFactory;
 
-import com.carepay.aws.AWS4Signer;
-import com.carepay.aws.DefaultRegionProviderChain;
-import com.carepay.aws.RegionProvider;
+import com.carepay.aws.auth.AWS4Signer;
+import com.carepay.aws.auth.RegionProvider;
+import com.carepay.aws.region.DefaultRegionProviderChain;
 import com.carepay.aws.util.SimpleNamespaceContext;
 import com.carepay.aws.util.URLOpener;
 import org.w3c.dom.Element;
@@ -46,7 +46,7 @@ public class EC2 {
     private final XPathExpression valueXpathExpression;
 
     public EC2() {
-        this(new AWS4Signer(), new DefaultRegionProviderChain(), URLOpener.DEFAULT, XPathFactory.newInstance().newXPath());
+        this(new AWS4Signer(), DefaultRegionProviderChain.getInstance(), URLOpener.DEFAULT, XPathFactory.newInstance().newXPath());
     }
 
     public EC2(final AWS4Signer signer, final RegionProvider regionProvider, final URLOpener opener, final XPath xpath) {

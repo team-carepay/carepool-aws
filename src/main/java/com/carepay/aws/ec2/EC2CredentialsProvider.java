@@ -1,15 +1,15 @@
 package com.carepay.aws.ec2;
 
-import java.net.MalformedURLException;
+import java.io.IOException;
 import java.net.URL;
 import java.time.Clock;
 import java.time.LocalDateTime;
-import java.time.ZoneOffset;
-import java.time.format.DateTimeFormatter;
+import java.util.HashMap;
 import java.util.Map;
 
-import com.carepay.aws.Credentials;
-import com.carepay.aws.CredentialsProvider;
+import com.carepay.aws.auth.Credentials;
+import com.carepay.aws.auth.CredentialsProvider;
+import com.carepay.aws.util.Env;
 import com.carepay.aws.util.URLOpener;
 
 import static java.time.ZoneOffset.UTC;
@@ -18,48 +18,67 @@ import static java.time.ZoneOffset.UTC;
  * EC2 implementation of AWS credentials provider. (using http://169.254.169.254/latest/meta-data)
  */
 public class EC2CredentialsProvider implements CredentialsProvider {
+    static final String ECS_CONTAINER_CREDENTIALS_PATH = "AWS_CONTAINER_CREDENTIALS_RELATIVE_URI";
+    static final String CONTAINER_CREDENTIALS_FULL_URI = "AWS_CONTAINER_CREDENTIALS_FULL_URI";
+    static final String CONTAINER_AUTHORIZATION_TOKEN = "AWS_CONTAINER_AUTHORIZATION_TOKEN";
+    private static final String ECS_CREDENTIALS_ENDPOINT = "http://169.254.170.2";
+
     static final String SECURITY_CREDENTIALS_URL = "http://169.254.169.254/latest/meta-data/iam/security-credentials/";
-    private static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ISO_INSTANT.withZone(ZoneOffset.UTC);
 
-    private final EC2MetaData ec2metadata;
+    private final ResourceFetcher resourceFetcher;
     private final Clock clock;
-
-    private URL url;
+    final URL url;
+    final Map<String, String> headers = new HashMap<>();
     private Credentials lastCredentials;
-    private LocalDateTime expiryDate;
 
     public EC2CredentialsProvider() {
-        this(new EC2MetaData(URLOpener.DEFAULT), Clock.systemUTC());
+        this(new ResourceFetcher(URLOpener.DEFAULT), Clock.systemUTC(), Env.DEFAULT);
     }
 
-    public EC2CredentialsProvider(final EC2MetaData ec2metadata, final Clock clock) {
-        this.ec2metadata = ec2metadata;
+    public EC2CredentialsProvider(final ResourceFetcher resourceFetcher, final Clock clock, final Env env) {
+        this.resourceFetcher = resourceFetcher;
         this.clock = clock;
+        try {
+            final String relativeUri = env.getEnv(ECS_CONTAINER_CREDENTIALS_PATH);
+            if (relativeUri != null) {
+                this.url = new URL(ECS_CREDENTIALS_ENDPOINT + relativeUri);
+            } else {
+                final String fullUri = env.getEnv(CONTAINER_CREDENTIALS_FULL_URI);
+                if (fullUri != null) {
+                    this.url = new URL(fullUri);
+                    final String token = env.getEnv(CONTAINER_AUTHORIZATION_TOKEN);
+                    if (token != null) {
+                        headers.put("Authorization", token);
+                    }
+                } else {
+                    final URL securityCredentialsUrl = new URL(SECURITY_CREDENTIALS_URL);
+                    final String role = resourceFetcher.queryFirstLine(securityCredentialsUrl);
+                    if (role != null) {
+                        this.url = new URL(securityCredentialsUrl, role);
+                    } else {
+                        this.url = null;
+                    }
+                }
+            }
+        } catch (IOException e) {
+            throw new IllegalArgumentException(e.getMessage(), e);
+        }
     }
 
     @Override
     public Credentials getCredentials() {
-        LocalDateTime now = LocalDateTime.ofInstant(clock.instant(), UTC);
-        if (url == null) { // first time we need to determine the IAM role used by EC2
-            try {
-                final URL securityCredentialsUrl = new URL(SECURITY_CREDENTIALS_URL);
-                final String role = ec2metadata.queryMetaDataAsString(securityCredentialsUrl);
-                if (role != null) {
-                    this.url = new URL(securityCredentialsUrl, role);
-                } else {
-                    return null;
-                }
-            } catch (MalformedURLException e) {
-                throw new IllegalArgumentException(e.getMessage(), e);
-            }
+        if (url == null) {
+            return null;
         }
-        if ((expiryDate == null || expiryDate.isBefore(now))) {
-            Map<String, String> map = ec2metadata.queryMetaData(url);
-            lastCredentials = new Credentials(map.get("AccessKeyId"), map.get("SecretAccessKey"), map.get("Token"));
-            final String expirationString = map.get("Expiration");
-            if (lastCredentials.isValid() && expirationString != null) {
-                expiryDate = LocalDateTime.parse(expirationString, DATE_FORMATTER);
-            }
+        LocalDateTime now = LocalDateTime.ofInstant(clock.instant(), UTC);
+        if (lastCredentials == null || (lastCredentials.getExpiration() != null && lastCredentials.getExpiration().isBefore(now))) {
+            Map<String, String> map = resourceFetcher.queryJson(url);
+            lastCredentials = new Credentials(
+                    map.get("AccessKeyId"),
+                    map.get("SecretAccessKey"),
+                    map.get("Token"),
+                    map.get("Expiration")
+            );
         }
         return lastCredentials;
     }

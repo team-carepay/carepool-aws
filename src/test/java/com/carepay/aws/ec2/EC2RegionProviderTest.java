@@ -18,7 +18,7 @@ public class EC2RegionProviderTest {
     public void setUp() throws Exception {
         uc = mock(HttpURLConnection.class);
         when(uc.getInputStream()).thenReturn(getClass().getResourceAsStream("/metadata.json"));
-        EC2MetaData ec2metadata = new EC2MetaData(url -> uc);
+        EC2MetaData ec2metadata = new EC2MetaData(new ResourceFetcher(url -> uc));
         provider = new EC2RegionProvider(ec2metadata);
     }
 

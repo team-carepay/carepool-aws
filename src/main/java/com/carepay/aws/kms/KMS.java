@@ -9,7 +9,7 @@ import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.Base64;
 
-import com.carepay.aws.AWS4Signer;
+import com.carepay.aws.auth.AWS4Signer;
 import com.carepay.aws.util.URLOpener;
 import com.github.cliftonlabs.json_simple.JsonException;
 import com.github.cliftonlabs.json_simple.JsonKey;
@@ -54,7 +54,7 @@ public class KMS {
      */
     public String decrypt(final String cipherText) {
         final JsonObject request = new JsonObject()
-                .putChain(KmsPropertyName.CiphertextBlob.getKey(), cipherText);
+                .putChain(KmsPropertyName.CiphertextBlob, cipherText);
         final JsonObject response = performKmsOperation(request, Target.Decrypt);
         return new String(Base64.getDecoder().decode(response.getString(KmsPropertyName.Plaintext)), UTF_8);
     }
@@ -68,8 +68,8 @@ public class KMS {
      */
     public String encrypt(final String plaintext, final String keyId) {
         final JsonObject request = new JsonObject()
-                .putChain(KmsPropertyName.Plaintext.getKey(), plaintext)
-                .putChain(KmsPropertyName.KeyId.getKey(), keyId);
+                .putChain(KmsPropertyName.Plaintext, plaintext)
+                .putChain(KmsPropertyName.KeyId, keyId);
         final JsonObject response = performKmsOperation(request, Target.Encrypt);
         return response.getString(KmsPropertyName.CiphertextBlob);
     }
@@ -115,6 +115,7 @@ public class KMS {
     /**
      * Enum used for JSON request / response objects.
      */
+    @SuppressWarnings("java:S115")
     private enum KmsPropertyName implements JsonKey {
         CiphertextBlob,
         KeyId,
