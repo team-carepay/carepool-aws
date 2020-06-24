@@ -14,7 +14,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
 
 public class ProfileCredentialsProviderTest {
-    private static final File CREDENTIALS_FILE = new File(URI.create(ProfileCredentialsProviderTest.class.getResource("/homedir/.aws/credentials").toString()));
+    private static final File CREDENTIALS_FILE = new File(URI.create(ProfileCredentialsProviderTest.class.getResource("/homedir/.aws/config").toString()));
     private static final Clock CLOCK = Clock.fixed(Instant.parse("2015-08-30T12:36:00.00Z"), UTC);
     private ProfileCredentialsProvider credentialsProvider;
     private HttpURLConnection uc;

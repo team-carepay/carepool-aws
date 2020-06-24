@@ -46,7 +46,7 @@ public class ProfileCredentialsProvider implements CredentialsProvider {
         } else if (section.containsKey(ProcessCredentialsProvider.CREDENTIAL_PROCESS)) {
             delegateCredentialProvider = new ProcessCredentialsProvider(section);
         } else {
-            delegateCredentialProvider = new StaticProfileCredentialsProvider(section);
+            delegateCredentialProvider = new StaticProfileCredentialsProvider(new File(profileFile.getParentFile(), "credentials"), profileName);
         }
         this.clock = clock;
     }
