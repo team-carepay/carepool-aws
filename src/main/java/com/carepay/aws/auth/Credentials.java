@@ -1,36 +1,34 @@
 package com.carepay.aws.auth;
 
-import java.time.LocalDateTime;
-import java.time.ZoneOffset;
+import java.time.Instant;
 import java.time.format.DateTimeFormatter;
 
 /**
  * Contains AWS Credentials.
  */
 public class Credentials {
-    private static final DateTimeFormatter DATE_TIME_FORMATTER = DateTimeFormatter.ISO_INSTANT.withZone(ZoneOffset.UTC);
     private final String accessKeyId;
     private final String secretAccessKey;
     private final String token;
-    private final LocalDateTime expiration;
+    private final Instant expiration;
 
     public Credentials(final String accessKeyId,
                        final String secretAccessKey,
                        final String token) {
-        this(accessKeyId, secretAccessKey, token, (LocalDateTime) null);
+        this(accessKeyId, secretAccessKey, token, (Instant) null);
     }
 
     public Credentials(final String accessKeyId,
                        final String secretAccessKey,
                        final String token,
                        final String expiration) {
-        this(accessKeyId, secretAccessKey, token, expiration != null ? LocalDateTime.parse(expiration, DATE_TIME_FORMATTER) : null);
+        this(accessKeyId, secretAccessKey, token, expiration != null ? DateTimeFormatter.ISO_INSTANT.parse(expiration, Instant::from) : null);
     }
 
     public Credentials(final String accessKeyId,
                        final String secretAccessKey,
                        final String token,
-                       final LocalDateTime expiration) {
+                       final Instant expiration) {
         this.accessKeyId = accessKeyId;
         this.secretAccessKey = secretAccessKey;
         this.token = token;
@@ -53,7 +51,7 @@ public class Credentials {
         return token;
     }
 
-    public LocalDateTime getExpiration() {
+    public Instant getExpiration() {
         return expiration;
     }
 

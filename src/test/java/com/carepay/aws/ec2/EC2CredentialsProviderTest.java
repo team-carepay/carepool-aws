@@ -39,9 +39,7 @@ public class EC2CredentialsProviderTest {
     @Test
     public void testExpiry() throws IOException {
         Clock clock = mock(Clock.class);
-        when(clock.instant()).thenReturn(
-                Instant.parse("2015-08-30T12:36:00.00Z"),
-                Instant.parse("2020-08-30T12:36:00.00Z"));
+        when(clock.instant()).thenReturn(Instant.parse("2020-08-30T12:36:00.00Z"));
         HttpURLConnection ucRole = mock(HttpURLConnection.class);
         when(ucRole.getInputStream()).thenReturn(getClass().getResourceAsStream("/security-credentials-role.txt"));
         HttpURLConnection ucJson = mock(HttpURLConnection.class);

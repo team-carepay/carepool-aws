@@ -2,7 +2,6 @@ package com.carepay.aws.auth;
 
 import java.io.File;
 import java.time.Clock;
-import java.time.LocalDateTime;
 import java.util.Collections;
 import java.util.Map;
 import java.util.Optional;
@@ -10,8 +9,6 @@ import java.util.Optional;
 import com.carepay.aws.util.Env;
 import com.carepay.aws.util.IniFile;
 import com.carepay.aws.util.URLOpener;
-
-import static java.time.ZoneOffset.UTC;
 
 /**
  * Credentials provider which supports the profile stored in the `.aws` folder in the homedir.
@@ -53,8 +50,7 @@ public class ProfileCredentialsProvider implements CredentialsProvider {
 
     @Override
     public Credentials getCredentials() {
-        LocalDateTime now = LocalDateTime.ofInstant(clock.instant(), UTC);
-        if (lastCredentials == null || (lastCredentials.getExpiration() != null && lastCredentials.getExpiration().isBefore(now))) {
+        if (lastCredentials == null || (lastCredentials.getExpiration() != null && lastCredentials.getExpiration().isBefore(clock.instant()))) {
             lastCredentials = delegateCredentialProvider.getCredentials();
         }
         return lastCredentials;
