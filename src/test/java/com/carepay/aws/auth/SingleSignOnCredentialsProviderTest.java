@@ -6,7 +6,6 @@ import java.net.HttpURLConnection;
 import java.net.URISyntaxException;
 import java.time.Clock;
 import java.time.Instant;
-import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -45,8 +44,7 @@ public class SingleSignOnCredentialsProviderTest {
         singleSignOnCredentialsProvider = new SingleSignOnCredentialsProvider(awsDir, section, CLOCK, u -> uc);
         final Credentials credentials = singleSignOnCredentialsProvider.getCredentials();
         assertThat(credentials.getAccessKeyId()).isEqualTo("AKIDEXAMPLE");
-        assertThat(credentials.getExpiration()).isAfter(LocalDateTime.now(CLOCK));
-        assertThat(credentials.getExpiration()).isEqualToIgnoringSeconds(LocalDateTime.now(CLOCK));
+        assertThat(credentials.getExpiration()).isEqualTo(CLOCK.instant());
         assertThat(singleSignOnCredentialsProvider.url).isEqualTo(URLOpener.create("https://portal.sso.eu-west-1.amazonaws.com/federation/credentials?role_name=AdministratorAccess&account_id=272942068046"));
         verify(uc).setRequestProperty(eq("x-amz-sso_bearer_token"), eq("KilRoyWasHere"));
     }

@@ -11,7 +11,8 @@ import java.net.URL;
 import java.security.GeneralSecurityException;
 import java.security.MessageDigest;
 import java.time.Clock;
-import java.time.LocalDateTime;
+import java.time.Instant;
+import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeFormatterBuilder;
 import java.util.Map;
@@ -24,14 +25,14 @@ import com.github.cliftonlabs.json_simple.JsonObject;
 import com.github.cliftonlabs.json_simple.Jsoner;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
-import static java.time.ZoneOffset.UTC;
 
 public class SingleSignOnCredentialsProvider implements CredentialsProvider {
 
     private static final DateTimeFormatter EXPIRES_FORMAT = new DateTimeFormatterBuilder()
             .append(DateTimeFormatter.ISO_LOCAL_DATE_TIME)
             .appendLiteral("UTC")
-            .toFormatter();
+            .toFormatter()
+            .withZone(ZoneId.of("UTC"));
     static final String SSO_START_URL = "sso_start_url";
     static final String SSO_REGION = "sso_region";
     static final String SSO_ACCOUNT_ID = "sso_account_id";
@@ -70,8 +71,8 @@ public class SingleSignOnCredentialsProvider implements CredentialsProvider {
                 final JsonObject cache = (JsonObject) Jsoner.deserialize(new FileReader(cacheFile));
                 final String accessToken = cache.getString(JsonProperty.accessToken);
                 final String expiresAtString = cache.getString(JsonProperty.expiresAt);
-                final LocalDateTime expiresDateTime = LocalDateTime.parse(expiresAtString, EXPIRES_FORMAT);
-                if (expiresDateTime.isBefore(LocalDateTime.now(clock))) {
+                final Instant expiresDateTime = EXPIRES_FORMAT.parse(expiresAtString, Instant::from);
+                if (expiresDateTime.isBefore(clock.instant())) {
                     return null;
                 }
                 final HttpURLConnection uc = this.opener.open(this.url);
@@ -87,7 +88,7 @@ public class SingleSignOnCredentialsProvider implements CredentialsProvider {
                             roleCredentials.getString(JsonProperty.accessKeyId),
                             roleCredentials.getString(JsonProperty.secretAccessKey),
                             roleCredentials.getString(JsonProperty.sessionToken),
-                            LocalDateTime.ofEpochSecond(roleCredentials.getLong(JsonProperty.expiration) / 1000L, 0, UTC)
+                            Instant.ofEpochSecond(roleCredentials.getLong(JsonProperty.expiration) / 1000L, 0)
                     );
                 }
             } catch (IOException | JsonException e) { // NOSONAR

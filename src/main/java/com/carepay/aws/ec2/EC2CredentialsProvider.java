@@ -3,7 +3,6 @@ package com.carepay.aws.ec2;
 import java.io.IOException;
 import java.net.URL;
 import java.time.Clock;
-import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -11,8 +10,6 @@ import com.carepay.aws.auth.Credentials;
 import com.carepay.aws.auth.CredentialsProvider;
 import com.carepay.aws.util.Env;
 import com.carepay.aws.util.URLOpener;
-
-import static java.time.ZoneOffset.UTC;
 
 /**
  * EC2 implementation of AWS credentials provider. (using http://169.254.169.254/latest/meta-data)
@@ -70,8 +67,7 @@ public class EC2CredentialsProvider implements CredentialsProvider {
         if (url == null) {
             return null;
         }
-        LocalDateTime now = LocalDateTime.ofInstant(clock.instant(), UTC);
-        if (lastCredentials == null || (lastCredentials.getExpiration() != null && lastCredentials.getExpiration().isBefore(now))) {
+        if (lastCredentials == null || (lastCredentials.getExpiration() != null && lastCredentials.getExpiration().isBefore(clock.instant()))) {
             Map<String, String> map = resourceFetcher.queryJson(url);
             lastCredentials = new Credentials(
                     map.get("AccessKeyId"),
