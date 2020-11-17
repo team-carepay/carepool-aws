@@ -49,6 +49,7 @@ public class SingleSignOnCredentialsProvider implements CredentialsProvider {
         final String accountId = section.get(SSO_ACCOUNT_ID);
         final String roleName = section.get(SSO_ROLE_NAME);
         try {
+            @SuppressWarnings("java:S4790")
             final MessageDigest sha1 = MessageDigest.getInstance("SHA1");
             if (ssoStartUrl != null) {
                 this.cacheFile = new File(awsDir, "sso/cache/" + Hex.encode(sha1.digest(ssoStartUrl.getBytes(UTF_8))) + ".json");

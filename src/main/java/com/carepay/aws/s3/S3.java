@@ -32,6 +32,9 @@ public class S3 {
     private static final String S3_NAMESPACE = "http://s3.amazonaws.com/doc/2006-03-01/";
     private static final int UNSIGNED_PAYLOAD = -1;
     private static final String UPLOAD_NOT_FOUND = "Upload not found: ";
+    private static final String AMAZONAWS_COM = ".amazonaws.com";
+    private static final String HTTPS = "https";
+    private static final String S_3 = "s3";
 
     private final AWS4Signer signer;
     private final URLOpener opener;
@@ -41,7 +44,7 @@ public class S3 {
     private RegionProvider regionProvider;
 
     public S3() {
-        this(new AWS4Signer(), URLOpener.DEFAULT, XPathFactory.newInstance().newXPath());
+        this(new AWS4Signer(), new URLOpener.Default(), XPathFactory.newInstance().newXPath());
     }
 
     public S3(final AWS4Signer signer, final URLOpener opener, final XPath xpath) {
@@ -49,7 +52,7 @@ public class S3 {
         this.opener = opener;
         this.multiparts = new HashMap<>();
         this.regionProvider = signer.getRegionProvider();
-        xpath.setNamespaceContext(new SimpleNamespaceContext("s3", S3_NAMESPACE));
+        xpath.setNamespaceContext(new SimpleNamespaceContext(S_3, S3_NAMESPACE));
         try {
             uploadIdXpathExpression = xpath.compile("/s3:InitiateMultipartUploadResult/s3:UploadId");
             errorMessageExpression = xpath.compile("/Error/Message");
@@ -67,13 +70,13 @@ public class S3 {
      * @throws IOException in case of error
      */
     public String startMultipart(String bucket, String path) throws IOException {
-        final URL url = new URL("https", bucket + ".s3." + regionProvider.getRegion() + ".amazonaws.com", path + "?uploads");
+        final URL url = new URL(HTTPS, String.join(".", bucket, S_3, regionProvider.getRegion(), AMAZONAWS_COM), path + "?uploads");
         final HttpURLConnection uc = opener.open(url);
         try {
             uc.setRequestMethod("POST");
             uc.setConnectTimeout(1000);
             uc.setReadTimeout(1000);
-            signer.sign("s3", uc, null);
+            signer.sign(S_3, uc, null);
             final int responseCode = uc.getResponseCode();
             try (final InputStream is = responseCode < 400 ? uc.getInputStream() : uc.getErrorStream()) {
                 if (responseCode >= 400) {
@@ -103,7 +106,7 @@ public class S3 {
         expireMultipartUploads();
         final Multipart multipart = Optional.ofNullable(multiparts.get(uploadId)).orElseThrow(() -> new IllegalArgumentException(UPLOAD_NOT_FOUND + uploadId));
         final int partNumber = multipart.parts.size() + 1;
-        final URL url = new URL("https", multipart.bucket + ".s3." + regionProvider.getRegion() + ".amazonaws.com", multipart.key + "?PartNumber=" + partNumber + "&UploadId=" + uploadId);
+        final URL url = new URL(HTTPS, multipart.bucket + ".s3." + regionProvider.getRegion() + AMAZONAWS_COM, multipart.key + "?PartNumber=" + partNumber + "&UploadId=" + uploadId);
         final HttpURLConnection uc = opener.open(url);
         try {
             uc.setRequestMethod("PUT");
@@ -138,7 +141,7 @@ public class S3 {
     public void finishMultipart(String uploadId) throws IOException {
         expireMultipartUploads();
         final Multipart multipart = Optional.ofNullable(multiparts.get(uploadId)).orElseThrow(() -> new IllegalArgumentException(UPLOAD_NOT_FOUND + uploadId));
-        final URL url = new URL("https", multipart.bucket + ".s3." + regionProvider.getRegion() + ".amazonaws.com", multipart.key + "?UploadId=" + uploadId);
+        final URL url = new URL(HTTPS, String.join(".", multipart.bucket, S_3, regionProvider.getRegion(), AMAZONAWS_COM), multipart.key + "?UploadId=" + uploadId);
         final HttpURLConnection urlConnection = opener.open(url);
         try {
             urlConnection.setRequestMethod("POST");
@@ -179,14 +182,14 @@ public class S3 {
      * @param length number of bytes
      */
     public void putObject(String bucket, String path, byte[] buf, int offset, int length) throws IOException {
-        final URL url = new URL("https", bucket + ".s3." + regionProvider.getRegion() + ".amazonaws.com", path);
+        final URL url = new URL(HTTPS, String.join(".", bucket, S_3, regionProvider.getRegion(), AMAZONAWS_COM), path);
         final HttpURLConnection uc = opener.open(url);
         try {
             uc.setRequestMethod("PUT");
             uc.setConnectTimeout(1000);
             uc.setReadTimeout(1000);
             uc.setDoOutput(true);
-            signer.sign("s3", uc, null, 0, UNSIGNED_PAYLOAD);
+            signer.sign(S_3, uc, null, 0, UNSIGNED_PAYLOAD);
             try (OutputStream outputSteam = uc.getOutputStream()) {
                 outputSteam.write(buf, offset, length);
             }
@@ -209,7 +212,7 @@ public class S3 {
     public void abortMultipartUpload(String uploadId) throws IOException {
         expireMultipartUploads();
         final Multipart multipart = Optional.ofNullable(multiparts.get(uploadId)).orElseThrow(() -> new IllegalArgumentException(UPLOAD_NOT_FOUND + uploadId));
-        final URL url = new URL("https", multipart.bucket + ".s3." + regionProvider.getRegion() + ".amazonaws.com", multipart.key + "?UploadId=" + uploadId);
+        final URL url = new URL(HTTPS, multipart.bucket + ".s3." + regionProvider.getRegion() + AMAZONAWS_COM, multipart.key + "?UploadId=" + uploadId);
         final HttpURLConnection urlConnection = opener.open(url);
         try {
             urlConnection.setRequestMethod("DELETE");

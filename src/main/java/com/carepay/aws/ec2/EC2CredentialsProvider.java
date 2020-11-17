@@ -18,8 +18,10 @@ public class EC2CredentialsProvider implements CredentialsProvider {
     static final String ECS_CONTAINER_CREDENTIALS_PATH = "AWS_CONTAINER_CREDENTIALS_RELATIVE_URI";
     static final String CONTAINER_CREDENTIALS_FULL_URI = "AWS_CONTAINER_CREDENTIALS_FULL_URI";
     static final String CONTAINER_AUTHORIZATION_TOKEN = "AWS_CONTAINER_AUTHORIZATION_TOKEN";
+    @SuppressWarnings("java:S1313")
     private static final String ECS_CREDENTIALS_ENDPOINT = "http://169.254.170.2";
 
+    @SuppressWarnings("java:S1313")
     static final String SECURITY_CREDENTIALS_URL = "http://169.254.169.254/latest/meta-data/iam/security-credentials/";
 
     private final ResourceFetcher resourceFetcher;
@@ -29,7 +31,7 @@ public class EC2CredentialsProvider implements CredentialsProvider {
     private Credentials lastCredentials;
 
     public EC2CredentialsProvider() {
-        this(new ResourceFetcher(URLOpener.DEFAULT), Clock.systemUTC(), Env.DEFAULT);
+        this(new ResourceFetcher(new URLOpener.Default()), Clock.systemUTC(), new Env.Default());
     }
 
     public EC2CredentialsProvider(final ResourceFetcher resourceFetcher, final Clock clock, final Env env) {

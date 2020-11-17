@@ -12,7 +12,7 @@ public class EnvironmentCredentialsProvider implements CredentialsProvider {
     private final Env env;
 
     public EnvironmentCredentialsProvider() {
-        this(Env.DEFAULT);
+        this(new Env.Default());
     }
 
     public EnvironmentCredentialsProvider(Env env) {

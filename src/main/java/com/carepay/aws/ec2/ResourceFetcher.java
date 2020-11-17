@@ -38,7 +38,7 @@ public class ResourceFetcher {
     private final URLOpener opener;
 
     public ResourceFetcher() {
-        this(URLOpener.DEFAULT);
+        this(new URLOpener.Default());
     }
 
     public ResourceFetcher(URLOpener opener) {

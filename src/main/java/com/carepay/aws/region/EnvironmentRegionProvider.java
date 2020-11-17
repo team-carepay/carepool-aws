@@ -10,7 +10,7 @@ public class EnvironmentRegionProvider implements RegionProvider {
     private final Env env;
 
     public EnvironmentRegionProvider() {
-        this(Env.DEFAULT);
+        this(new Env.Default());
     }
 
     public EnvironmentRegionProvider(Env env) {

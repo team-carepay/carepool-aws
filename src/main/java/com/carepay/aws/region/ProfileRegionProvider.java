@@ -21,7 +21,7 @@ public class ProfileRegionProvider implements RegionProvider {
     private String lastRegion;
 
     public ProfileRegionProvider() {
-        this(new File(new File(System.getProperty(USER_HOME)), AWS_CONFIG), Env.DEFAULT);
+        this(new File(new File(System.getProperty(USER_HOME)), AWS_CONFIG), new Env.Default());
     }
 
     public ProfileRegionProvider(final File file, final Env env) {
@@ -29,7 +29,7 @@ public class ProfileRegionProvider implements RegionProvider {
         final String profileName = Optional.ofNullable(env.getEnv(AWS_PROFILE))
                 .orElseGet(() -> Optional.ofNullable(System.getProperty("aws.profile")).orElse(DEFAULT));
         final Map<String, String> section = Optional.ofNullable(
-                profileFile.getSection(profileName)).orElseGet(() -> profileFile.getSection("default"));
+                profileFile.getSection(profileName)).orElseGet(() -> profileFile.getSection(DEFAULT));
         lastRegion = section != null ? section.get(REGION) : null;
     }
 

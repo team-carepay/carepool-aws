@@ -14,10 +14,10 @@ import static java.nio.charset.StandardCharsets.UTF_8;
  * Utility class for reading ini files (e.g. ~/.aws/credentials and ~/.aws/config)
  */
 public class IniFile {
-    private File file;
-    private Map<String, Map<String, String>> multimap = new HashMap<>();
+    private final File file;
+    private final Map<String, Map<String, String>> multimap = new HashMap<>();
 
-    public IniFile(File file) {
+    public IniFile(final File file) {
         this.file = file;
         read();
     }
@@ -28,22 +28,31 @@ public class IniFile {
             String section = null;
             while ((line = br.readLine()) != null) {
                 line = line.trim();
-                if (line.length() >= 3 && !line.startsWith("#")) {
-                    if (line.startsWith("[")) {
-                        section = line.substring(line.startsWith("[profile ") ? 9 : 1, line.length() - 1);
-                    } else {
-                        int pos = line.indexOf('=');
-                        if (pos > 0) {
-                            String key = line.substring(0, pos).trim();
-                            String value = line.substring(pos + 1).trim();
-                            multimap.computeIfAbsent(section, k -> new HashMap<>()).put(key, value);
-                        }
-                    }
+                if (line.isEmpty() || line.startsWith("#")) {
+                    continue;
+                }
+                if (line.startsWith("[")) {
+                    section = getSectionFromLine(line);
+                } else {
+                    addEntry(section, line);
                 }
             }
         } catch (IOException e) { // NOSONAR
             // ignore
         }
+    }
+
+    private void addEntry(final String section, final String line) {
+        int pos = line.indexOf('=');
+        if (pos > 0) {
+            final String key = line.substring(0, pos).trim();
+            final String value = line.substring(pos + 1).trim();
+            multimap.computeIfAbsent(section, k -> new HashMap<>()).put(key, value);
+        }
+    }
+
+    private String getSectionFromLine(final String line) {
+        return line.substring(line.startsWith("[profile ") ? 9 : 1, line.length() - 1);
     }
 
     public String getString(String section, String key) {
