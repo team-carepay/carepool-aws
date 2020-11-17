@@ -9,16 +9,21 @@ import java.net.URL;
  * This interface allows us to open HTTPS connections during unit-tests. The default implementation
  * simply opens a real HTTPS connection
  */
+@FunctionalInterface
 public interface URLOpener {
     HttpURLConnection open(URL url) throws IOException;
-
-    URLOpener DEFAULT = url -> (HttpURLConnection) url.openConnection();
-
     static URL create(String url) {
         try {
             return new URL(url);
         } catch (MalformedURLException e) {
             throw new IllegalArgumentException(e);
+        }
+    }
+
+    class Default implements URLOpener {
+        @Override
+        public HttpURLConnection open(final URL url) throws IOException {
+            return (HttpURLConnection) url.openConnection();
         }
     }
 }

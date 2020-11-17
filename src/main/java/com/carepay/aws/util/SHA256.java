@@ -9,10 +9,15 @@ import javax.crypto.spec.SecretKeySpec;
 import static com.carepay.aws.util.Hex.encode;
 import static java.nio.charset.StandardCharsets.UTF_8;
 
-public class SHA256 {
+public final class SHA256 {
     private static final String HMAC_SHA_256 = "HmacSHA256";
     private static final String EMPTY_STRING_SHA256 = "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855";
 
+    private SHA256() {
+        throw new IllegalStateException();
+    }
+
+    @SuppressWarnings("java:S4790")
     protected static MessageDigest getSha256MessageDigestInstance() throws NoSuchAlgorithmException {
         return MessageDigest.getInstance("SHA-256");
     }

@@ -24,7 +24,7 @@ public class ProfileCredentialsProvider implements CredentialsProvider {
     private Credentials lastCredentials;
 
     public ProfileCredentialsProvider() {
-        this(new File(new File(System.getProperty(USER_HOME)), AWS_CONFIG_FILENAME), Env.DEFAULT, Clock.systemDefaultZone(), URLOpener.DEFAULT);
+        this(new File(new File(System.getProperty(USER_HOME)), AWS_CONFIG_FILENAME), new Env.Default(), Clock.systemDefaultZone(), new URLOpener.Default());
     }
 
     public ProfileCredentialsProvider(final File profileFile, final Env env, final Clock clock, final URLOpener opener) {
@@ -35,7 +35,7 @@ public class ProfileCredentialsProvider implements CredentialsProvider {
                 iniFile.getSection(profileName))
                 .orElseGet(
                         () -> Optional.ofNullable(
-                                iniFile.getSection("default"))
+                                iniFile.getSection(DEFAULT))
                                 .orElse(Collections.emptyMap())
                 );
         if (section.containsKey(SingleSignOnCredentialsProvider.SSO_START_URL)) {

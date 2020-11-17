@@ -46,7 +46,7 @@ public class EC2 {
     private final XPathExpression valueXpathExpression;
 
     public EC2() {
-        this(new AWS4Signer(), DefaultRegionProviderChain.getInstance(), URLOpener.DEFAULT, XPathFactory.newInstance().newXPath());
+        this(new AWS4Signer(), DefaultRegionProviderChain.getInstance(), new URLOpener.Default(), XPathFactory.newInstance().newXPath());
     }
 
     public EC2(final AWS4Signer signer, final RegionProvider regionProvider, final URLOpener opener, final XPath xpath) {

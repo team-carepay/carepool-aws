@@ -8,7 +8,7 @@ import java.util.stream.Collectors;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
 
-public class QueryStringUtils {
+public final class QueryStringUtils {
     private static final char[] HEX_DIGITS_UPPER = "0123456789ABCDEF".toCharArray();
     private static final BitSet ENCODING_NOT_NEEDED = new BitSet(256);
     private static final BitSet ENCODING_NOT_NEEDED_PATH = new BitSet(256);
@@ -25,6 +25,9 @@ public class QueryStringUtils {
         ENCODING_NOT_NEEDED_PATH.set('/');
     }
 
+    private QueryStringUtils() {
+        throw new IllegalStateException();
+    }
     /**
      * Convert a Map to QueryString format
      *
@@ -44,11 +47,11 @@ public class QueryStringUtils {
      * @param queryString the URI encoded string (name=value&name2=value2)
      * @return the URI Encoded string
      */
-    public static Map<String, String> parseQueryString(String queryString) {
-        Map<String, String> queryParams = new HashMap<>();
+    public static Map<String, String> parseQueryString(final String queryString) {
+        final Map<String, String> queryParams = new HashMap<>();
         if (queryString != null && queryString.length() > 0) {
             for (String pair : queryString.split("&", -1)) {
-                int idx = pair.indexOf("=");
+                final int idx = pair.indexOf("=");
                 queryParams.put(uriDecode(pair.substring(0, idx)), uriDecode(pair.substring(idx + 1)));
             }
         }
@@ -103,7 +106,8 @@ public class QueryStringUtils {
     public static String uriDecode(final String input) {
         final ByteArrayOutputStream result = new ByteArrayOutputStream();
         final int len = input.length();
-        for (int i = 0; i < len; ) {
+        int i = 0;
+        while (i < len) {
             final char ch = input.charAt(i++);
             if (ch == '%') {
                 result.write((char) Integer.parseInt(input.substring(i, i + 2), 16));

@@ -1,8 +1,11 @@
 package com.carepay.aws.util;
 
-public class Hex {
+public final class Hex {
     private static final char[] HEX_DIGITS_LOWER = "0123456789abcdef".toCharArray();
 
+    private Hex() {
+        throw new IllegalStateException();
+    }
     /**
      * HEX encode an array of bytes to lowercase hex string.
      *

@@ -31,7 +31,7 @@ public class S3OutputStream extends OutputStream {
     private final byte[] buf;
 
     /**
-     * Amazon S3 client. TODO: support KMS
+     * Amazon S3 client. Note: does not yet KMS
      */
     private final S3 s3;
 
@@ -86,7 +86,8 @@ public class S3OutputStream extends OutputStream {
     @Override
     public void write(final byte[] byteArray, final int offset, final int length) throws IOException {
         this.assertOpen();
-        int ofs = offset, len = length;
+        int ofs = offset;
+        int len = length;
         int size;
         while (len > (size = this.buf.length - position)) {
             System.arraycopy(byteArray, ofs, this.buf, this.position, size);
