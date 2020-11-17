@@ -26,6 +26,9 @@ public class QueryStringUtilsTest {
 
     @Test
     public void parseQueryString() {
+        assertThat(QueryStringUtils.parseQueryString("a=b&c=d"))
+                .containsEntry("a", "b")
+                .containsEntry("c", "d");
     }
 
     @Test

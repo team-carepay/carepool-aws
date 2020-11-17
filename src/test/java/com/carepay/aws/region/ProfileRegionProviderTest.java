@@ -11,9 +11,7 @@ import org.junit.Test;
 
 import static java.time.ZoneOffset.UTC;
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.spy;
-import static org.mockito.Mockito.when;
 
 public class ProfileRegionProviderTest {
     private static final File PROFILE_FILE = new File(URI.create(ProfileRegionProviderTest.class.getResource("/homedir/.aws/config").toString()));
@@ -62,17 +60,9 @@ public class ProfileRegionProviderTest {
     }
 
     @Test
-    public void testFileModified() throws URISyntaxException {
-        Clock clock = mock(Clock.class);
-        when(clock.instant()).thenReturn(
-                Instant.parse("2015-08-30T12:36:00.00Z"),
-                Instant.parse("2016-08-30T12:36:00.00Z"),
-                Instant.parse("2017-08-30T12:36:00.00Z"));
+    public void testAwsEnvironmentVar() throws URISyntaxException {
         File profileFile = spy(new File(getClass().getResource("/homedir/.aws/config").toURI()));
-        when(profileFile.lastModified()).thenReturn(1L, 1L, 2L);
-        ProfileRegionProvider provider = new ProfileRegionProvider(profileFile, n -> null);
-        provider.getRegion();
-        provider.getRegion();
-        provider.getRegion();
+        ProfileRegionProvider provider = new ProfileRegionProvider(profileFile, e -> "kenya");
+        assertThat(provider.getRegion()).isEqualTo("ap-southeast-1");
     }
 }
