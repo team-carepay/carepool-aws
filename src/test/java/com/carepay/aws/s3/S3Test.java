@@ -44,9 +44,10 @@ public class S3Test {
     @Test
     public void testPutObject() throws IOException {
         when(urlConnection.getResponseCode()).thenReturn(200);
-        when(urlConnection.getRequestMethod()).thenReturn("GET");
+        when(urlConnection.getRequestMethod()).thenReturn("PUT");
         when(urlConnection.getInputStream()).thenReturn(new ByteArrayInputStream(new byte[]{0x01}));
         s3.putObject("testbucket", "testkey.png", new byte[]{0x01, 0x02, 0x03, (byte) 0x81}, 0, 4);
+        assertThat(outputStream.toByteArray()).hasSize(4);
     }
 
     @Test
@@ -90,9 +91,9 @@ public class S3Test {
         when(urlConnection.getOutputStream()).thenReturn(uploadPartRequest, finishRequest);
         String uploadId = s3.startMultipart("testbucket", "testkey2.png");
         s3.uploadPart(uploadId, "ABCD".getBytes(UTF_8), 0, 4);
-        assertThat(uploadPartRequest.toString()).isEqualTo("ABCD");
+        assertThat(uploadPartRequest).hasToString("ABCD");
         s3.finishMultipart(uploadId);
-        assertThat(finishRequest.toString()).isEqualTo("<CompleteMultipartUpload xmlns=\"http://s3.amazonaws.com/doc/2006-03-01/\"><Part><ETag>b54357faf0632cce46e942fa68356b38</ETag><PartNumber>1</PartNumber></Part></CompleteMultipartUpload>");
+        assertThat(finishRequest).hasToString("<CompleteMultipartUpload xmlns=\"http://s3.amazonaws.com/doc/2006-03-01/\"><Part><ETag>b54357faf0632cce46e942fa68356b38</ETag><PartNumber>1</PartNumber></Part></CompleteMultipartUpload>");
     }
 
     @Test

@@ -45,7 +45,7 @@ public class EC2Test {
     @Test
     public void testDescribeTags() {
         Map<String, String> tags = ec2.describeTags("i-12345");
-        assertThat(tags.size()).isEqualTo(7);
+        assertThat(tags).hasSize(7);
     }
 
     @Test

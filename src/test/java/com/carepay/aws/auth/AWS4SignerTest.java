@@ -65,9 +65,10 @@ public class AWS4SignerTest {
         for (int n = 0; n < keys.size(); n++) {
             headers.put(keys.get(n), values.get(n));
         }
-        assertThat(headers.get("X-Amz-Date")).isEqualTo("20180919T160242Z");
-        assertThat(headers.get("Authorization")).isEqualTo("AWS4-HMAC-SHA256 Credential=AKIDEXAMPLE/20180919/eu-west-1/ec2/aws4_request, SignedHeaders=host;x-amz-date, Signature=9b1492651302e34ea30855a769377e4465a1cc96aedb5f81fd523e3c2dd3dad0");
-        assertThat(headers.get("X-Amz-Security-Token")).isEqualTo("SeSsIoNtOkEn");
+        assertThat(headers)
+                .containsEntry("X-Amz-Date", "20180919T160242Z")
+                .containsEntry("Authorization", "AWS4-HMAC-SHA256 Credential=AKIDEXAMPLE/20180919/eu-west-1/ec2/aws4_request, SignedHeaders=host;x-amz-date, Signature=9b1492651302e34ea30855a769377e4465a1cc96aedb5f81fd523e3c2dd3dad0")
+                .containsEntry("X-Amz-Security-Token", "SeSsIoNtOkEn");
     }
 
     @Test
