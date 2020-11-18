@@ -6,8 +6,11 @@ import java.net.URL;
 import java.time.Clock;
 import java.time.format.DateTimeFormatter;
 import java.util.Map;
+import java.util.Set;
 import java.util.TreeMap;
 import java.util.WeakHashMap;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import com.carepay.aws.region.DefaultRegionProviderChain;
 import com.carepay.aws.util.Hex;
@@ -21,11 +24,14 @@ import static java.time.ZoneOffset.UTC;
  * Supports signing AWS requests. See https://docs.aws.amazon.com/general/latest/gr/signing_aws_api_requests.html
  */
 public class AWS4Signer {
-    /**
-     * for performance reasons we cache the signing key, TTL is 24 hours
-     */
-    static final Map<String, byte[]> KEY_CACHE = new WeakHashMap<>();
-    private static final String RDS_DB = "rds-db";
+    private static final Set<String> SERVICES_WITH_SECURITY_TOKEN = Stream.of("s3").collect(Collectors.toSet());
+    private static final String X_AMZ_DATE = "X-Amz-Date";
+    private static final String X_AMZ_CONTENT_SHA_256 = "X-Amz-Content-SHA256";
+    private static final String X_AMZ_ALGORITHM = "X-Amz-Algorithm";
+    private static final String X_AMZ_CREDENTIAL = "X-Amz-Credential";
+    private static final String X_AMZ_EXPIRES = "X-Amz-Expires";
+    private static final String X_AMZ_SIGNED_HEADERS = "X-Amz-SignedHeaders";
+    private static final String X_AMZ_SECURITY_TOKEN = "X-Amz-Security-Token";
     private static final String AWS_4_REQUEST = "aws4_request";
     /**
      * the date-format used by AWS
@@ -35,17 +41,20 @@ public class AWS4Signer {
             .withZone(UTC);
     private static final String AWS_4_HMAC_SHA_256 = "AWS4-HMAC-SHA256";
     private static final String UNSIGNED_PAYLOAD = "UNSIGNED-PAYLOAD";
-    private static final String AMZ_SECURITY_TOKEN = "X-Amz-Security-Token";
-
     protected final Clock clock;
     protected final CredentialsProvider credentialsProvider;
     protected final RegionProvider regionProvider;
+    /**
+     * for performance reasons we cache the signing key, TTL is 24 hours
+     */
+    private final Map<String, byte[]> keyCache = new WeakHashMap<>();
+    private final String service;
 
     /**
      * Creates a new AWS4Signer
      */
-    public AWS4Signer() {
-        this(DefaultCredentialsProviderChain.getInstance(), DefaultRegionProviderChain.getInstance(), Clock.systemUTC());
+    public AWS4Signer(final String service) {
+        this(service, DefaultCredentialsProviderChain.getInstance(), DefaultRegionProviderChain.getInstance(), Clock.systemUTC());
     }
 
     /**
@@ -55,12 +64,20 @@ public class AWS4Signer {
      * @param regionProvider      AWS Region Provider
      * @param clock               clock (configurable for tests)
      */
-    public AWS4Signer(CredentialsProvider credentialsProvider, RegionProvider regionProvider, Clock clock) {
+    public AWS4Signer(final String service, final CredentialsProvider credentialsProvider, final RegionProvider regionProvider, final Clock clock) {
+        this.service = service;
         this.credentialsProvider = credentialsProvider;
         this.regionProvider = regionProvider;
         this.clock = clock;
     }
 
+    static URL createURL(final String protocol, final String host, final int port, final String file) {
+        try {
+            return new URL(protocol, host, port, file);
+        } catch (MalformedURLException e) {
+            throw new IllegalArgumentException(e.getMessage(), e);
+        }
+    }
 
     /**
      * Adds AWS4 headers to the request.
@@ -68,8 +85,8 @@ public class AWS4Signer {
      * @param httpURLConnection the URL connection to sign
      * @param payload           the body of the request
      */
-    public void sign(final String service, final HttpURLConnection httpURLConnection, final byte[] payload) {
-        sign(service, httpURLConnection, payload, 0, payload != null ? payload.length : 0);
+    public void signHeaders(final HttpURLConnection httpURLConnection, final byte[] payload) {
+        signHeaders(httpURLConnection, payload, 0, payload != null ? payload.length : 0);
     }
 
     /**
@@ -80,18 +97,8 @@ public class AWS4Signer {
      * @param offset  the offset in the payload
      * @param length  the length of the payload; use -1 to indicate the payload is unsigned
      */
-    public void sign(final String service, final HttpURLConnection uc, final byte[] payload, final int offset, final int length) {
-        new SignRequest(service, uc).signAuthorizationHeader(payload, offset, length);
-    }
-
-    /**
-     * @param host   database hostname (dbname.xxxx.eu-west-1.rds.amazonaws.com)
-     * @param port   database port (MySQL uses 3306)
-     * @param dbUser database username
-     * @return the DB token
-     */
-    public String createDbAuthToken(final String host, final int port, final String dbUser) {
-        return new SignRequest(host, port, dbUser).signQuery();
+    public void signHeaders(final HttpURLConnection uc, final byte[] payload, final int offset, final int length) {
+        new SignRequest(uc).signHeaders(payload, offset, length);
     }
 
     /**
@@ -104,7 +111,7 @@ public class AWS4Signer {
      */
     protected byte[] getSigningKey(Credentials credentials, String service, String region, String dateStr) {
         final String cacheKey = service + region + credentials.getAccessKeyId() + dateStr;
-        return KEY_CACHE.computeIfAbsent(cacheKey, key -> {
+        return keyCache.computeIfAbsent(cacheKey, key -> {
             final byte[] kSecret = ("AWS4" + credentials.getSecretAccessKey()).getBytes(UTF_8);
             final byte[] kDate = SHA256.sign(dateStr, kSecret);
             final byte[] kRegion = SHA256.sign(region, kDate);
@@ -118,35 +125,9 @@ public class AWS4Signer {
     }
 
     /**
-     * Wrapper class for HttpURLConnection, used for RDS-DB signing requests.
-     */
-    static class DBHttpURLConnection extends HttpURLConnection {
-
-        public DBHttpURLConnection(final URL u) {
-            super(u);
-        }
-
-        @Override
-        public void disconnect() {
-            // not needed for DB wrapper
-        }
-
-        @Override
-        public boolean usingProxy() {
-            return false;
-        }
-
-        @Override
-        public void connect() {
-            // not needed for DB wrapper
-        }
-    }
-
-    /**
      * Helper class used for signing requests.
      */
-    private class SignRequest {
-        private final String service;
+    protected class SignRequest {
         private final URL url;
         private final HttpURLConnection urlConnection;
         private final TreeMap<String, String> signedHeaders;
@@ -157,30 +138,17 @@ public class AWS4Signer {
         private final String dateStr;
         private final String scope;
 
-        public SignRequest(final String service, final HttpURLConnection urlConnection) {
-            this.service = service;
+        public SignRequest(final HttpURLConnection urlConnection) {
             this.urlConnection = urlConnection;
             this.url = urlConnection.getURL();
             this.region = regionProvider.getRegion();
             this.credentials = credentialsProvider.getCredentials();
             this.dateTimeStr = AWS_DATE_FMT.format(clock.instant());
             this.dateStr = dateTimeStr.substring(0, 8);
-            this.scope = dateStr + "/" + region + "/" + service + "/" + AWS_4_REQUEST;
+            this.scope = String.join("/", dateStr, region, service, AWS_4_REQUEST);
             this.signedHeaders = new TreeMap<>(String::compareToIgnoreCase);
-            this.queryParams = new TreeMap<>();
-            signedHeaders.put("Host", url.getPort() > 0 ? url.getHost() + ":" + url.getPort() : url.getHost());
-            queryParams.putAll(QueryStringUtils.parseQueryString(url.getQuery()));
-        }
-
-        /**
-         * Creates a new SignRequest for RDS IAM authentication
-         *
-         * @param dbHost database hostname
-         * @param dbPort database port
-         * @param dbUser database user
-         */
-        public SignRequest(final String dbHost, final int dbPort, final String dbUser) {
-            this(RDS_DB, new DBHttpURLConnection(createURL("https", dbHost, dbPort, "/?Action=connect&DBUser=" + dbUser)));
+            this.queryParams = new TreeMap<>(QueryStringUtils.parseQueryString(url));
+            signedHeaders.put("Host", QueryStringUtils.getHostname(url));
         }
 
         /**
@@ -190,12 +158,24 @@ public class AWS4Signer {
          * @param offset  offset in the payload
          * @param length  length of the payload
          */
-        public void signAuthorizationHeader(final byte[] payload, final int offset, final int length) {
-            signedHeaders.put("X-Amz-Date", dateTimeStr);
+        public void signHeaders(final byte[] payload, final int offset, final int length) {
+            signedHeaders.put(X_AMZ_DATE, dateTimeStr);
+            addSecurityToken();
             final String contentSha256 = calculateContentSha256(payload, offset, length);
             final String stringToSign = getStringToSign(contentSha256);
             final byte[] signature = SHA256.sign(stringToSign, getSigningKey(credentials, service, region, dateStr));
             addAuthorizationHeader(signature);
+        }
+
+        protected void addSecurityToken() {
+            final String securityToken = credentials.getToken();
+            if (securityToken != null) {
+                if (SERVICES_WITH_SECURITY_TOKEN.contains(service)) {
+                    signedHeaders.put(X_AMZ_SECURITY_TOKEN, securityToken);
+                } else {
+                    urlConnection.setRequestProperty(X_AMZ_SECURITY_TOKEN, securityToken);
+                }
+            }
         }
 
         private void addAuthorizationHeader(final byte[] signature) {
@@ -216,26 +196,15 @@ public class AWS4Signer {
             canonicalStringBuilder.append('\n')
                     .append(String.join(";", signedHeaders.keySet()).toLowerCase()).append('\n')
                     .append(contentSha256);
-            return AWS_4_HMAC_SHA_256 + "\n" +
-                    dateTimeStr + "\n" +
-                    scope + "\n" +
-                    SHA256.hash(canonicalStringBuilder.toString());
+            return String.join("\n", AWS_4_HMAC_SHA_256, dateTimeStr, scope, SHA256.hash(canonicalStringBuilder.toString()));
         }
 
         private String calculateContentSha256(final byte[] payload, final int offset, final int length) {
+            final String contentSha256 = length < 0 ? UNSIGNED_PAYLOAD : SHA256.hash(payload, offset, length);
             if ("s3".equals(service)) {
-                final String contentSha256 = length < 0 ? UNSIGNED_PAYLOAD : SHA256.hash(payload, offset, length);
-                signedHeaders.put("X-Amz-Content-SHA256", contentSha256);
-                if (this.credentials.hasToken()) {
-                    signedHeaders.put(AMZ_SECURITY_TOKEN, this.credentials.getToken());
-                }
-                return contentSha256;
-            } else {
-                if (this.credentials.hasToken()) {
-                    urlConnection.setRequestProperty(AMZ_SECURITY_TOKEN, this.credentials.getToken());
-                }
-                return SHA256.hash(payload, offset, length);
+                signedHeaders.put(X_AMZ_CONTENT_SHA_256, contentSha256);
             }
+            return contentSha256;
         }
 
         /**
@@ -244,25 +213,17 @@ public class AWS4Signer {
          * @return the signed query
          */
         public String signQuery() {
-            queryParams.put("X-Amz-Algorithm", AWS_4_HMAC_SHA_256);
-            queryParams.put("X-Amz-Credential", credentials.getAccessKeyId() + "/" + scope);
-            queryParams.put("X-Amz-Date", dateTimeStr);
-            queryParams.put("X-Amz-Expires", "900");
+            queryParams.put(X_AMZ_ALGORITHM, AWS_4_HMAC_SHA_256);
+            queryParams.put(X_AMZ_CREDENTIAL, credentials.getAccessKeyId() + "/" + scope);
+            queryParams.put(X_AMZ_DATE, dateTimeStr);
+            queryParams.put(X_AMZ_EXPIRES, "900");
             if (credentials.hasToken()) {
-                queryParams.put(AMZ_SECURITY_TOKEN, credentials.getToken());
+                queryParams.put(X_AMZ_SECURITY_TOKEN, credentials.getToken());
             }
-            queryParams.put("X-Amz-SignedHeaders", String.join(";", signedHeaders.keySet()).toLowerCase());
-            final String stringToSign = getStringToSign(SHA256.hash((byte[]) null));
+            queryParams.put(X_AMZ_SIGNED_HEADERS, String.join(";", signedHeaders.keySet()).toLowerCase());
+            final String stringToSign = getStringToSign(SHA256.EMPTY_STRING_SHA256);
             final byte[] signature = SHA256.sign(stringToSign, getSigningKey(credentials, service, region, dateStr));
             return url.getHost() + ":" + url.getPort() + url.getPath() + "?" + QueryStringUtils.toQueryString(queryParams) + "&X-Amz-Signature=" + Hex.encode(signature);
-        }
-    }
-
-    static URL createURL(final String protocol, final String host, final int port, final String file) {
-        try {
-            return new URL(protocol, host, port, file);
-        } catch (MalformedURLException e) {
-            throw new IllegalArgumentException(e.getMessage(), e);
         }
     }
 }

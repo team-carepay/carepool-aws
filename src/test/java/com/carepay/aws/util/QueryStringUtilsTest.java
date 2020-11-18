@@ -1,5 +1,7 @@
 package com.carepay.aws.util;
 
+import java.net.MalformedURLException;
+import java.net.URL;
 import java.util.Map;
 import java.util.TreeMap;
 
@@ -25,8 +27,8 @@ public class QueryStringUtilsTest {
     }
 
     @Test
-    public void parseQueryString() {
-        assertThat(QueryStringUtils.parseQueryString("a=b&c=d"))
+    public void parseQueryString() throws MalformedURLException {
+        assertThat(QueryStringUtils.parseQueryString(new URL("https://host.com/path?a=b&c=d")))
                 .containsEntry("a", "b")
                 .containsEntry("c", "d");
     }

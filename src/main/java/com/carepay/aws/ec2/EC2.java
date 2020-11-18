@@ -46,7 +46,7 @@ public class EC2 {
     private final XPathExpression valueXpathExpression;
 
     public EC2() {
-        this(new AWS4Signer(), DefaultRegionProviderChain.getInstance(), new URLOpener.Default(), XPathFactory.newInstance().newXPath());
+        this(new AWS4Signer("ec2"), DefaultRegionProviderChain.getInstance(), new URLOpener.Default(), XPathFactory.newInstance().newXPath());
     }
 
     public EC2(final AWS4Signer signer, final RegionProvider regionProvider, final URLOpener opener, final XPath xpath) {
@@ -74,7 +74,7 @@ public class EC2 {
             uc.setReadTimeout(1000);
             uc.setDoOutput(true);
             uc.setRequestProperty("Content-Type", "application/x-www-form-urlencoded");
-            signer.sign("ec2", uc, payLoad.getBytes(UTF_8));
+            signer.signHeaders(uc, payLoad.getBytes(UTF_8));
             try (OutputStream outputSteam = uc.getOutputStream()) {
                 outputSteam.write(payLoad.getBytes(UTF_8));
             }

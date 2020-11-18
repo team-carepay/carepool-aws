@@ -37,7 +37,7 @@ public class S3Test {
         when(urlConnection.getURL()).thenReturn(new URL("https://testbucket.s3.us-east-1.amazonaws.com/testkey.png"));
         outputStream = new ByteArrayOutputStream();
         when(urlConnection.getOutputStream()).thenReturn(outputStream);
-        AWS4Signer signer = new AWS4Signer(() -> new Credentials("AKIDEXAMPLE", "wJalrXUtnFEMI/K7MDENG+bPxRfiCYEXAMPLEKEY", null), () -> "us-east-1", CLOCK);
+        AWS4Signer signer = new S3AWS4Signer(() -> new Credentials("AKIDEXAMPLE", "wJalrXUtnFEMI/K7MDENG+bPxRfiCYEXAMPLEKEY", null), () -> "us-east-1", CLOCK);
         s3 = new S3(signer, (u) -> urlConnection, XPathFactory.newInstance().newXPath());
     }
 

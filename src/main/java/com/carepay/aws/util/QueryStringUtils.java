@@ -1,6 +1,6 @@
 package com.carepay.aws.util;
 
-import java.io.ByteArrayOutputStream;
+import java.net.URL;
 import java.util.BitSet;
 import java.util.HashMap;
 import java.util.Map;
@@ -10,6 +10,21 @@ import static java.nio.charset.StandardCharsets.UTF_8;
 
 public final class QueryStringUtils {
     private static final char[] HEX_DIGITS_UPPER = "0123456789ABCDEF".toCharArray();
+    private static final char[] HEX_TO_CHAR = new char[]{
+            0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0,
+            0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0,
+            0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0,
+            0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0,
+            0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0,
+            0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0,
+            0x0, 0x1, 0x2, 0x3, 0x4, 0x5, 0x6, 0x7,
+            0x8, 0x9, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0,
+            0x0, 0xA, 0xB, 0xC, 0xD, 0xE, 0xF, 0x0,
+            0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0,
+            0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0,
+            0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0,
+            0x0, 0xA, 0xB, 0xC, 0xD, 0xE, 0xF, 0x0
+    };
     private static final BitSet ENCODING_NOT_NEEDED = new BitSet(256);
     private static final BitSet ENCODING_NOT_NEEDED_PATH = new BitSet(256);
 
@@ -28,6 +43,7 @@ public final class QueryStringUtils {
     private QueryStringUtils() {
         throw new IllegalStateException();
     }
+
     /**
      * Convert a Map to QueryString format
      *
@@ -44,18 +60,23 @@ public final class QueryStringUtils {
     /**
      * Parse a query string to a Map
      *
-     * @param queryString the URI encoded string (name=value&name2=value2)
+     * @param url url including query-string
      * @return the URI Encoded string
      */
-    public static Map<String, String> parseQueryString(final String queryString) {
+    public static Map<String, String> parseQueryString(final URL url) {
+        final String queryString = url.getQuery();
         final Map<String, String> queryParams = new HashMap<>();
-        if (queryString != null && queryString.length() > 0) {
+        if (isNotEmpty(queryString)) {
             for (String pair : queryString.split("&", -1)) {
                 final int idx = pair.indexOf("=");
                 queryParams.put(uriDecode(pair.substring(0, idx)), uriDecode(pair.substring(idx + 1)));
             }
         }
         return queryParams;
+    }
+
+    private static boolean isNotEmpty(String queryString) {
+        return queryString != null && !queryString.isEmpty();
     }
 
     /**
@@ -69,13 +90,17 @@ public final class QueryStringUtils {
         final byte[] bytes = input.getBytes(UTF_8);
         for (byte singleByte : bytes) {
             final char ch = (char) singleByte;
-            if (ch < 128 && ENCODING_NOT_NEEDED.get(ch)) {
+            if (ENCODING_NOT_NEEDED.get(ch)) {
                 result.append(ch);
             } else {
-                result.append('%').append(HEX_DIGITS_UPPER[(ch >> 4) & 0xf]).append(HEX_DIGITS_UPPER[ch & 0xf]);
+                appendEncoded(result, ch);
             }
         }
         return result.toString();
+    }
+
+    private static StringBuilder appendEncoded(StringBuilder result, char ch) {
+        return result.append('%').append(HEX_DIGITS_UPPER[(ch >> 4) & 0xf]).append(HEX_DIGITS_UPPER[ch & 0xf]);
     }
 
     /**
@@ -89,10 +114,10 @@ public final class QueryStringUtils {
         final byte[] bytes = input.getBytes(UTF_8);
         for (byte singleByte : bytes) {
             final char ch = (char) singleByte;
-            if (ch < 128 && ENCODING_NOT_NEEDED_PATH.get(ch)) {
+            if (ENCODING_NOT_NEEDED_PATH.get(ch)) {
                 result.append(ch);
             } else {
-                result.append('%').append(HEX_DIGITS_UPPER[(ch >> 4) & 0xf]).append(HEX_DIGITS_UPPER[ch & 0xf]);
+                appendEncoded(result, ch);
             }
         }
         return result.toString();
@@ -104,18 +129,31 @@ public final class QueryStringUtils {
      * @param input the URI Encoded String
      */
     public static String uriDecode(final String input) {
-        final ByteArrayOutputStream result = new ByteArrayOutputStream();
         final int len = input.length();
+        final byte[] buf = new byte[len];
         int i = 0;
+        int j = 0;
+        char ch;
         while (i < len) {
-            final char ch = input.charAt(i++);
+            ch = input.charAt(i++);
             if (ch == '%') {
-                result.write((char) Integer.parseInt(input.substring(i, i + 2), 16));
+                ch = (char) (HEX_TO_CHAR[input.charAt(i)] << 4 | HEX_TO_CHAR[input.charAt(i + 1)]);
                 i += 2;
-            } else {
-                result.write(ch);
             }
+            buf[j++] = (byte) ch;
         }
-        return new String(result.toByteArray(), UTF_8);
+        return new String(buf, 0, j, UTF_8);
+    }
+
+    public static String getHostname(final URL url) {
+        if (hasCustomPort(url)) {
+            return url.getHost() + ":" + url.getPort();
+        } else {
+            return url.getHost();
+        }
+    }
+
+    public static boolean hasCustomPort(final URL url) {
+        return url.getPort() > 0 && url.getPort() != url.getDefaultPort();
     }
 }
