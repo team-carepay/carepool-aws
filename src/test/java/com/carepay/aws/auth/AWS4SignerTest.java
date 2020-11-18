@@ -32,8 +32,7 @@ public class AWS4SignerTest {
     @Before
     public void setUp() {
         Credentials credentials = new Credentials("AKIDEXAMPLE", "wJalrXUtnFEMI/K7MDENG+bPxRfiCYEXAMPLEKEY", "SeSsIoNtOkEn");
-        AWS4Signer.KEY_CACHE.clear();
-        signer = new AWS4Signer(() -> credentials, () -> "eu-west-1", CLOCK);
+        signer = new AWS4Signer("ec2", () -> credentials, () -> "eu-west-1", CLOCK);
     }
 
     @Test
@@ -57,7 +56,7 @@ public class AWS4SignerTest {
         when(uc.getRequestMethod()).thenReturn("POST");
         ArgumentCaptor<String> keyCaptor = ArgumentCaptor.forClass(String.class);
         ArgumentCaptor<String> valueCaptor = ArgumentCaptor.forClass(String.class);
-        signer.sign("ec2", uc, null);
+        signer.signHeaders(uc, null);
         verify(uc, times(4)).setRequestProperty(keyCaptor.capture(), valueCaptor.capture());
         List<String> keys = keyCaptor.getAllValues();
         List<String> values = valueCaptor.getAllValues();
@@ -71,22 +70,6 @@ public class AWS4SignerTest {
                 .containsEntry("X-Amz-Security-Token", "SeSsIoNtOkEn");
     }
 
-    @Test
-    public void testGeneratorSignature() throws MalformedURLException, GeneralSecurityException {
-        String token = signer.createDbAuthToken("dbhost.xyz.eu-west-1.amazonaws.com", 3306, "iam_user");
-        assertThat(token).isEqualTo("dbhost.xyz.eu-west-1.amazonaws.com:3306/?Action=connect&DBUser=iam_user&X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=AKIDEXAMPLE%2F20180919%2Feu-west-1%2Frds-db%2Faws4_request&X-Amz-Date=20180919T160242Z&X-Amz-Expires=900&X-Amz-Security-Token=SeSsIoNtOkEn&X-Amz-SignedHeaders=host&X-Amz-Signature=0c5925dc554b2e175d58dcb96d9ad71cf85c81ba0835a523291f9f6ce90096ca");
-    }
-
-    @Test
-    public void testRealRdsToken() throws MalformedURLException, GeneralSecurityException {
-        Clock clock = Clock.fixed(Instant.parse("2020-01-28T01:17:52.00Z"), ZoneId.of("UTC"));
-        Credentials credentials = new Credentials("AKIDEXAMPLE", "wJalrXUtnFEMI/K7MDENG+bPxRfiCYEXAMPLEKEY", null);
-        AWS4Signer aws4signer = new AWS4Signer(() -> credentials, () -> "eu-west-1", clock);
-
-        String token = aws4signer.createDbAuthToken("rdsmysql.cdgmuqiadpid.us-west-2.rds.amazonaws.com", 3306, "jane_doe");
-        assertThat(token).isEqualTo("rdsmysql.cdgmuqiadpid.us-west-2.rds.amazonaws.com:3306/?Action=connect&DBUser=jane_doe&X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=AKIDEXAMPLE%2F20200128%2Feu-west-1%2Frds-db%2Faws4_request&X-Amz-Date=20200128T011752Z&X-Amz-Expires=900&X-Amz-SignedHeaders=host&X-Amz-Signature=9fa655ff59886494ffce521cb732648b9dd8feeb71b9b14d3d1e2b8a3c500ce8");
-    }
-
     /**
      * https://docs.aws.amazon.com/general/latest/gr/signature-v4-test-suite.html
      */
@@ -94,12 +77,12 @@ public class AWS4SignerTest {
     public void aws4TestSuite() throws MalformedURLException {
         Clock clock = Clock.fixed(Instant.parse("2015-08-30T12:36:00.00Z"), ZoneId.of("UTC"));
         Credentials credentials = new Credentials("AKIDEXAMPLE", "wJalrXUtnFEMI/K7MDENG+bPxRfiCYEXAMPLEKEY", null);
-        AWS4Signer aws4signer = new AWS4Signer(() -> credentials, () -> "us-east-1", clock);
+        AWS4Signer aws4signer = new AWS4Signer("service", () -> credentials, () -> "us-east-1", clock);
         URL url = new URL("https://example.amazonaws.com/?Param1=value1&Param2=value2");
         HttpURLConnection uc = mock(HttpURLConnection.class);
         when(uc.getURL()).thenReturn(url);
         when(uc.getRequestMethod()).thenReturn("GET");
-        aws4signer.sign("service", uc, null);
+        aws4signer.signHeaders(uc, null);
         ArgumentCaptor<String> keyCaptor = ArgumentCaptor.forClass(String.class);
         ArgumentCaptor<String> valueCaptor = ArgumentCaptor.forClass(String.class);
         verify(uc, times(3)).setRequestProperty(keyCaptor.capture(), valueCaptor.capture());

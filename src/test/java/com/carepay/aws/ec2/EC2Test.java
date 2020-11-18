@@ -38,7 +38,7 @@ public class EC2Test {
         when(urlConnection.getInputStream()).thenReturn(getClass().getResourceAsStream("/ec2-describe-tags-response.xml"));
         outputStream = new ByteArrayOutputStream();
         when(urlConnection.getOutputStream()).thenReturn(outputStream);
-        AWS4Signer signer = new AWS4Signer(() -> new Credentials("AKIDEXAMPLE", "wJalrXUtnFEMI/K7MDENG+bPxRfiCYEXAMPLEKEY", null), () -> "us-east-1", CLOCK);
+        AWS4Signer signer = new AWS4Signer("ec2", () -> new Credentials("AKIDEXAMPLE", "wJalrXUtnFEMI/K7MDENG+bPxRfiCYEXAMPLEKEY", null), () -> "us-east-1", CLOCK);
         ec2 = new EC2(signer, () -> "us-east-1", u -> urlConnection, XPathFactory.newInstance().newXPath());
     }
 

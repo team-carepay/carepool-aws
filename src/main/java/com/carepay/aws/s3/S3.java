@@ -44,7 +44,7 @@ public class S3 {
     private RegionProvider regionProvider;
 
     public S3() {
-        this(new AWS4Signer(), new URLOpener.Default(), XPathFactory.newInstance().newXPath());
+        this(new S3AWS4Signer(), new URLOpener.Default(), XPathFactory.newInstance().newXPath());
     }
 
     public S3(final AWS4Signer signer, final URLOpener opener, final XPath xpath) {
@@ -76,7 +76,7 @@ public class S3 {
             uc.setRequestMethod("POST");
             uc.setConnectTimeout(1000);
             uc.setReadTimeout(1000);
-            signer.sign(S_3, uc, null);
+            signer.signHeaders(uc, null);
             final int responseCode = uc.getResponseCode();
             try (final InputStream is = responseCode < 400 ? uc.getInputStream() : uc.getErrorStream()) {
                 if (responseCode >= 400) {
@@ -113,7 +113,7 @@ public class S3 {
             uc.setConnectTimeout(1000);
             uc.setReadTimeout(1000);
             uc.setDoOutput(true);
-            signer.sign("s3", uc, null, 0, UNSIGNED_PAYLOAD);
+            signer.signHeaders(uc, null, 0, UNSIGNED_PAYLOAD);
             try (OutputStream outputSteam = uc.getOutputStream()) {
                 outputSteam.write(buf, offset, length);
             }
@@ -154,7 +154,7 @@ public class S3 {
             }
             sb.append("</CompleteMultipartUpload>");
             final byte[] payload = sb.toString().getBytes(UTF_8);
-            signer.sign("s3", urlConnection, payload);
+            signer.signHeaders(urlConnection, payload);
             try (OutputStream outputSteam = urlConnection.getOutputStream()) {
                 outputSteam.write(payload);
             }
@@ -189,7 +189,7 @@ public class S3 {
             uc.setConnectTimeout(1000);
             uc.setReadTimeout(1000);
             uc.setDoOutput(true);
-            signer.sign(S_3, uc, null, 0, UNSIGNED_PAYLOAD);
+            signer.signHeaders(uc, null, 0, UNSIGNED_PAYLOAD);
             try (OutputStream outputSteam = uc.getOutputStream()) {
                 outputSteam.write(buf, offset, length);
             }
@@ -218,7 +218,7 @@ public class S3 {
             urlConnection.setRequestMethod("DELETE");
             urlConnection.setConnectTimeout(1000);
             urlConnection.setReadTimeout(1000);
-            signer.sign("s3", urlConnection, null);
+            signer.signHeaders(urlConnection, null);
             final int responseCode = urlConnection.getResponseCode();
             try (final InputStream is = responseCode < 400 ? urlConnection.getInputStream() : urlConnection.getErrorStream()) {
                 if (responseCode >= 400) {
