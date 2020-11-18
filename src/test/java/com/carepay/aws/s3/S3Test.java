@@ -7,7 +7,6 @@ import java.net.HttpURLConnection;
 import java.net.URL;
 import java.time.Clock;
 import java.time.Instant;
-import javax.xml.xpath.XPathFactory;
 
 import com.carepay.aws.auth.AWS4Signer;
 import com.carepay.aws.auth.Credentials;
@@ -38,7 +37,7 @@ public class S3Test {
         outputStream = new ByteArrayOutputStream();
         when(urlConnection.getOutputStream()).thenReturn(outputStream);
         AWS4Signer signer = new S3AWS4Signer(() -> new Credentials("AKIDEXAMPLE", "wJalrXUtnFEMI/K7MDENG+bPxRfiCYEXAMPLEKEY", null), () -> "us-east-1", CLOCK);
-        s3 = new S3(signer, (u) -> urlConnection, XPathFactory.newInstance().newXPath());
+        s3 = new S3(signer, (u) -> urlConnection);
     }
 
     @Test
@@ -134,11 +133,13 @@ public class S3Test {
 
     @Test
     public void abortMultipartError() throws IOException {
-        when(urlConnection.getResponseCode()).thenReturn(200, 400);
-        when(urlConnection.getRequestMethod()).thenReturn("POST", "DELETE");
+        when(urlConnection.getResponseCode()).thenReturn(200);
+        when(urlConnection.getRequestMethod()).thenReturn("POST");
         when(urlConnection.getInputStream()).thenReturn(getClass().getResourceAsStream("/s3-create-multipart-response.xml"));
-        when(urlConnection.getErrorStream()).thenReturn(new ByteArrayInputStream("<Error><Message>Test</Message></Error>".getBytes(UTF_8)));
         String uploadId = s3.startMultipart("testbucket", "testkey2.png");
+        when(urlConnection.getResponseCode()).thenReturn(400);
+        when(urlConnection.getRequestMethod()).thenReturn("DELETE");
+        when(urlConnection.getErrorStream()).thenReturn(new ByteArrayInputStream("<Error><Message>Test</Message></Error>".getBytes(UTF_8)));
         try {
             s3.abortMultipartUpload(uploadId);
             fail();
@@ -149,11 +150,13 @@ public class S3Test {
 
     @Test
     public void abortMultipartErrorInvalidXml() throws IOException {
-        when(urlConnection.getResponseCode()).thenReturn(200, 400);
-        when(urlConnection.getRequestMethod()).thenReturn("POST", "DELETE");
+        when(urlConnection.getResponseCode()).thenReturn(200);
+        when(urlConnection.getRequestMethod()).thenReturn("POST");
         when(urlConnection.getInputStream()).thenReturn(getClass().getResourceAsStream("/s3-create-multipart-response.xml"));
-        when(urlConnection.getErrorStream()).thenReturn(new ByteArrayInputStream("Invalid".getBytes(UTF_8)));
         String uploadId = s3.startMultipart("testbucket", "testkey2.png");
+        when(urlConnection.getResponseCode()).thenReturn(400);
+        when(urlConnection.getRequestMethod()).thenReturn("DELETE");
+        when(urlConnection.getErrorStream()).thenReturn(new ByteArrayInputStream("Invalid".getBytes(UTF_8)));
         try {
             s3.abortMultipartUpload(uploadId);
             fail();
@@ -164,11 +167,13 @@ public class S3Test {
 
     @Test
     public void uploadPartError() throws IOException {
-        when(urlConnection.getResponseCode()).thenReturn(200, 400);
-        when(urlConnection.getRequestMethod()).thenReturn("POST", "PUT");
+        when(urlConnection.getResponseCode()).thenReturn(200);
+        when(urlConnection.getRequestMethod()).thenReturn("POST");
         when(urlConnection.getInputStream()).thenReturn(getClass().getResourceAsStream("/s3-create-multipart-response.xml"));
-        when(urlConnection.getErrorStream()).thenReturn(new ByteArrayInputStream("<Error><Message>Test</Message></Error>".getBytes(UTF_8)));
         String uploadId = s3.startMultipart("testbucket", "testkey2.png");
+        when(urlConnection.getResponseCode()).thenReturn(400);
+        when(urlConnection.getRequestMethod()).thenReturn("PUT");
+        when(urlConnection.getErrorStream()).thenReturn(new ByteArrayInputStream("<Error><Message>Test</Message></Error>".getBytes(UTF_8)));
         try {
             s3.uploadPart(uploadId, new byte[]{1}, 0, 1);
             fail();
@@ -179,11 +184,13 @@ public class S3Test {
 
     @Test
     public void uploadPartErrorInvalidXml() throws IOException {
-        when(urlConnection.getResponseCode()).thenReturn(200, 400);
-        when(urlConnection.getRequestMethod()).thenReturn("POST", "PUT");
+        when(urlConnection.getResponseCode()).thenReturn(200);
+        when(urlConnection.getRequestMethod()).thenReturn("POST");
         when(urlConnection.getInputStream()).thenReturn(getClass().getResourceAsStream("/s3-create-multipart-response.xml"));
-        when(urlConnection.getErrorStream()).thenReturn(new ByteArrayInputStream("Invalid".getBytes(UTF_8)));
         String uploadId = s3.startMultipart("testbucket", "testkey2.png");
+        when(urlConnection.getResponseCode()).thenReturn(400);
+        when(urlConnection.getRequestMethod()).thenReturn("PUT");
+        when(urlConnection.getErrorStream()).thenReturn(new ByteArrayInputStream("Invalid".getBytes(UTF_8)));
         try {
             s3.uploadPart(uploadId, new byte[]{1}, 0, 1);
             fail();
@@ -194,11 +201,12 @@ public class S3Test {
 
     @Test
     public void finishMultipartError() throws IOException {
-        when(urlConnection.getResponseCode()).thenReturn(200, 400);
-        when(urlConnection.getRequestMethod()).thenReturn("POST", "POST");
+        when(urlConnection.getResponseCode()).thenReturn(200);
+        when(urlConnection.getRequestMethod()).thenReturn("POST");
         when(urlConnection.getInputStream()).thenReturn(getClass().getResourceAsStream("/s3-create-multipart-response.xml"));
-        when(urlConnection.getErrorStream()).thenReturn(new ByteArrayInputStream("<Error><Message>Test</Message></Error>".getBytes(UTF_8)));
         String uploadId = s3.startMultipart("testbucket", "testkey2.png");
+        when(urlConnection.getResponseCode()).thenReturn(400);
+        when(urlConnection.getErrorStream()).thenReturn(new ByteArrayInputStream("<Error><Message>Test</Message></Error>".getBytes(UTF_8)));
         try {
             s3.finishMultipart(uploadId);
             fail();
@@ -209,11 +217,12 @@ public class S3Test {
 
     @Test
     public void finishMultipartErrorInvalidXml() throws IOException {
-        when(urlConnection.getResponseCode()).thenReturn(200, 400);
-        when(urlConnection.getRequestMethod()).thenReturn("POST", "POST");
+        when(urlConnection.getResponseCode()).thenReturn(200);
+        when(urlConnection.getRequestMethod()).thenReturn("POST");
         when(urlConnection.getInputStream()).thenReturn(getClass().getResourceAsStream("/s3-create-multipart-response.xml"));
-        when(urlConnection.getErrorStream()).thenReturn(new ByteArrayInputStream("Invalid".getBytes(UTF_8)));
         String uploadId = s3.startMultipart("testbucket", "testkey2.png");
+        when(urlConnection.getResponseCode()).thenReturn(400);
+        when(urlConnection.getErrorStream()).thenReturn(new ByteArrayInputStream("Invalid".getBytes(UTF_8)));
         try {
             s3.finishMultipart(uploadId);
             fail();
