@@ -1,7 +1,6 @@
 package com.carepay.aws.s3;
 
 import java.io.IOException;
-import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.HttpURLConnection;
 import java.net.URL;
@@ -11,16 +10,10 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.TimeUnit;
-import javax.xml.xpath.XPath;
-import javax.xml.xpath.XPathExpression;
-import javax.xml.xpath.XPathExpressionException;
-import javax.xml.xpath.XPathFactory;
 
 import com.carepay.aws.auth.AWS4Signer;
 import com.carepay.aws.auth.RegionProvider;
-import com.carepay.aws.util.SimpleNamespaceContext;
 import com.carepay.aws.util.URLOpener;
-import org.xml.sax.InputSource;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
 
@@ -29,35 +22,58 @@ import static java.nio.charset.StandardCharsets.UTF_8;
  */
 public class S3 {
 
-    private static final String S3_NAMESPACE = "http://s3.amazonaws.com/doc/2006-03-01/";
-    private static final int UNSIGNED_PAYLOAD = -1;
     private static final String UPLOAD_NOT_FOUND = "Upload not found: ";
     private static final String AMAZONAWS_COM = ".amazonaws.com";
     private static final String HTTPS = "https";
     private static final String S_3 = "s3";
 
+    private static final ResponseHandler UPLOAD_ID_RESPONSE_HANDLER = new XPathResponseHandler("/s3:InitiateMultipartUploadResult/s3:UploadId");
+    private static final ResponseHandler ERROR_MESSAGE_RESPONSE_HANDLER = new XPathResponseHandler("/Error/Message");
+    private static final ResponseHandler ETAG_RESPONSE_HANDLER = uc -> uc.getHeaderField("ETag");
+    private static final ResponseHandler NOOP_RESPONSE_HANDLER = uc -> null;
+
     private final AWS4Signer signer;
     private final URLOpener opener;
     private final Map<String, Multipart> multiparts;
-    private final XPathExpression uploadIdXpathExpression;
-    private final XPathExpression errorMessageExpression;
-    private RegionProvider regionProvider;
+    private final RegionProvider regionProvider;
 
     public S3() {
-        this(new S3AWS4Signer(), new URLOpener.Default(), XPathFactory.newInstance().newXPath());
+        this(new S3AWS4Signer(), new URLOpener.Default());
     }
 
-    public S3(final AWS4Signer signer, final URLOpener opener, final XPath xpath) {
+    public S3(final AWS4Signer signer, final URLOpener opener) {
         this.signer = signer;
         this.opener = opener;
         this.multiparts = new HashMap<>();
         this.regionProvider = signer.getRegionProvider();
-        xpath.setNamespaceContext(new SimpleNamespaceContext(S_3, S3_NAMESPACE));
+    }
+
+    protected String execute(final URL url, final String method, byte[] payload, int offset, int length, ResponseHandler responseHandler) throws IOException {
+        final HttpURLConnection uc = opener.open(url);
         try {
-            uploadIdXpathExpression = xpath.compile("/s3:InitiateMultipartUploadResult/s3:UploadId");
-            errorMessageExpression = xpath.compile("/Error/Message");
-        } catch (XPathExpressionException e) {
-            throw new IllegalArgumentException(e.getMessage(), e);
+            uc.setRequestMethod(method);
+            execute(uc, payload, offset, length);
+            return responseHandler.extract(uc);
+        } finally {
+            uc.disconnect();
+        }
+    }
+
+    protected void execute(HttpURLConnection uc, byte[] payload, int offset, int length) throws IOException {
+        uc.setConnectTimeout(1000);
+        uc.setReadTimeout(1000);
+        signer.signHeaders(uc, payload, offset, length);
+        if (length > 0) {
+            try (OutputStream outputSteam = uc.getOutputStream()) {
+                outputSteam.write(payload, offset, length);
+            }
+        }
+        assertResponseCode(uc);
+    }
+
+    private void assertResponseCode(HttpURLConnection uc) throws IOException {
+        if (uc.getResponseCode() >= 400) {
+            throw new IOException(ERROR_MESSAGE_RESPONSE_HANDLER.extract(uc));
         }
     }
 
@@ -71,27 +87,10 @@ public class S3 {
      */
     public String startMultipart(String bucket, String path) throws IOException {
         final URL url = new URL(HTTPS, String.join(".", bucket, S_3, regionProvider.getRegion(), AMAZONAWS_COM), path + "?uploads");
-        final HttpURLConnection uc = opener.open(url);
-        try {
-            uc.setRequestMethod("POST");
-            uc.setConnectTimeout(1000);
-            uc.setReadTimeout(1000);
-            signer.signHeaders(uc, null);
-            final int responseCode = uc.getResponseCode();
-            try (final InputStream is = responseCode < 400 ? uc.getInputStream() : uc.getErrorStream()) {
-                if (responseCode >= 400) {
-                    throw new IOException(errorMessageExpression.evaluate(new InputSource(is)));
-                }
-                final String uploadId = uploadIdXpathExpression.evaluate(new InputSource(is));
-                multiparts.put(uploadId, new Multipart(bucket, path));
-                expireMultipartUploads();
-                return uploadId;
-            }
-        } catch (XPathExpressionException e) {
-            throw new IOException(uc.getResponseMessage() + e.getMessage(), e);
-        } finally {
-            uc.disconnect();
-        }
+        final String uploadId = execute(url, "POST", null, 0, -1, UPLOAD_ID_RESPONSE_HANDLER);
+        multiparts.put(uploadId, new Multipart(bucket, path));
+        expireMultipartUploads();
+        return uploadId;
     }
 
     /**
@@ -107,29 +106,8 @@ public class S3 {
         final Multipart multipart = Optional.ofNullable(multiparts.get(uploadId)).orElseThrow(() -> new IllegalArgumentException(UPLOAD_NOT_FOUND + uploadId));
         final int partNumber = multipart.parts.size() + 1;
         final URL url = new URL(HTTPS, multipart.bucket + ".s3." + regionProvider.getRegion() + AMAZONAWS_COM, multipart.key + "?PartNumber=" + partNumber + "&UploadId=" + uploadId);
-        final HttpURLConnection uc = opener.open(url);
-        try {
-            uc.setRequestMethod("PUT");
-            uc.setConnectTimeout(1000);
-            uc.setReadTimeout(1000);
-            uc.setDoOutput(true);
-            signer.signHeaders(uc, null, 0, UNSIGNED_PAYLOAD);
-            try (OutputStream outputSteam = uc.getOutputStream()) {
-                outputSteam.write(buf, offset, length);
-            }
-            final int responseCode = uc.getResponseCode();
-            try (final InputStream is = responseCode < 400 ? uc.getInputStream() : uc.getErrorStream()) {
-                if (responseCode >= 400) {
-                    throw new IOException(errorMessageExpression.evaluate(new InputSource(is)));
-                }
-            } catch (XPathExpressionException e) {
-                throw new IOException(e.getMessage(), e);
-            }
-            final PartETag eTag = new PartETag(partNumber, uc.getHeaderField("ETag"));
-            multipart.parts.add(eTag);
-        } finally {
-            uc.disconnect();
-        }
+        final String etag = execute(url, "PUT", buf, offset, length, ETAG_RESPONSE_HANDLER);
+        multipart.parts.add(new PartETag(partNumber, etag));
     }
 
     /**
@@ -142,34 +120,14 @@ public class S3 {
         expireMultipartUploads();
         final Multipart multipart = Optional.ofNullable(multiparts.get(uploadId)).orElseThrow(() -> new IllegalArgumentException(UPLOAD_NOT_FOUND + uploadId));
         final URL url = new URL(HTTPS, String.join(".", multipart.bucket, S_3, regionProvider.getRegion(), AMAZONAWS_COM), multipart.key + "?UploadId=" + uploadId);
-        final HttpURLConnection urlConnection = opener.open(url);
-        try {
-            urlConnection.setRequestMethod("POST");
-            urlConnection.setConnectTimeout(1000);
-            urlConnection.setReadTimeout(1000);
-            urlConnection.setDoOutput(true);
-            final StringBuilder sb = new StringBuilder("<CompleteMultipartUpload xmlns=\"http://s3.amazonaws.com/doc/2006-03-01/\">");
-            for (PartETag part : multipart.parts) {
-                sb.append("<Part><ETag>").append(part.etag).append("</ETag><PartNumber>").append(part.partNumber).append("</PartNumber></Part>");
-            }
-            sb.append("</CompleteMultipartUpload>");
-            final byte[] payload = sb.toString().getBytes(UTF_8);
-            signer.signHeaders(urlConnection, payload);
-            try (OutputStream outputSteam = urlConnection.getOutputStream()) {
-                outputSteam.write(payload);
-            }
-            final int responseCode = urlConnection.getResponseCode();
-            try (final InputStream is = responseCode < 400 ? urlConnection.getInputStream() : urlConnection.getErrorStream()) {
-                if (responseCode >= 400) {
-                    throw new IOException(errorMessageExpression.evaluate(new InputSource(is)));
-                }
-            } catch (XPathExpressionException e) {
-                throw new IOException(e.getMessage(), e);
-            }
-            multiparts.remove(uploadId);
-        } finally {
-            urlConnection.disconnect();
+        final StringBuilder sb = new StringBuilder("<CompleteMultipartUpload xmlns=\"http://s3.amazonaws.com/doc/2006-03-01/\">");
+        for (PartETag part : multipart.parts) {
+            sb.append("<Part><ETag>").append(part.etag).append("</ETag><PartNumber>").append(part.partNumber).append("</PartNumber></Part>");
         }
+        sb.append("</CompleteMultipartUpload>");
+        final byte[] payload = sb.toString().getBytes(UTF_8);
+        execute(url, "POST", payload, 0, payload.length, NOOP_RESPONSE_HANDLER);
+        multiparts.remove(uploadId);
     }
 
     /**
@@ -183,27 +141,7 @@ public class S3 {
      */
     public void putObject(String bucket, String path, byte[] buf, int offset, int length) throws IOException {
         final URL url = new URL(HTTPS, String.join(".", bucket, S_3, regionProvider.getRegion(), AMAZONAWS_COM), path);
-        final HttpURLConnection uc = opener.open(url);
-        try {
-            uc.setRequestMethod("PUT");
-            uc.setConnectTimeout(1000);
-            uc.setReadTimeout(1000);
-            uc.setDoOutput(true);
-            signer.signHeaders(uc, null, 0, UNSIGNED_PAYLOAD);
-            try (OutputStream outputSteam = uc.getOutputStream()) {
-                outputSteam.write(buf, offset, length);
-            }
-            final int responseCode = uc.getResponseCode();
-            try (final InputStream is = responseCode < 400 ? uc.getInputStream() : uc.getErrorStream()) {
-                if (responseCode >= 400) {
-                    throw new IOException(errorMessageExpression.evaluate(new InputSource(is)));
-                }
-            } catch (XPathExpressionException e) {
-                throw new IOException(e.getMessage(), e);
-            }
-        } finally {
-            uc.disconnect();
-        }
+        execute(url, "PUT", buf, offset, length, NOOP_RESPONSE_HANDLER);
     }
 
     /**
@@ -212,25 +150,9 @@ public class S3 {
     public void abortMultipartUpload(String uploadId) throws IOException {
         expireMultipartUploads();
         final Multipart multipart = Optional.ofNullable(multiparts.get(uploadId)).orElseThrow(() -> new IllegalArgumentException(UPLOAD_NOT_FOUND + uploadId));
-        final URL url = new URL(HTTPS, multipart.bucket + ".s3." + regionProvider.getRegion() + AMAZONAWS_COM, multipart.key + "?UploadId=" + uploadId);
-        final HttpURLConnection urlConnection = opener.open(url);
-        try {
-            urlConnection.setRequestMethod("DELETE");
-            urlConnection.setConnectTimeout(1000);
-            urlConnection.setReadTimeout(1000);
-            signer.signHeaders(urlConnection, null);
-            final int responseCode = urlConnection.getResponseCode();
-            try (final InputStream is = responseCode < 400 ? urlConnection.getInputStream() : urlConnection.getErrorStream()) {
-                if (responseCode >= 400) {
-                    throw new IOException(errorMessageExpression.evaluate(new InputSource(is)));
-                }
-            } catch (XPathExpressionException e) {
-                throw new IOException(e.getMessage(), e);
-            }
-            multiparts.remove(uploadId);
-        } finally {
-            urlConnection.disconnect();
-        }
+        final URL url = new URL(HTTPS, String.join(".", multipart.bucket, "s3", regionProvider.getRegion(), AMAZONAWS_COM), multipart.key + "?UploadId=" + uploadId);
+        execute(url, "DELETE", null, 0, -1, NOOP_RESPONSE_HANDLER);
+        multiparts.remove(uploadId);
     }
 
     protected void expireMultipartUploads() {
@@ -245,7 +167,7 @@ public class S3 {
         private final String bucket;
         private final String key;
         private final List<PartETag> parts;
-        private long timestamp;
+        private final long timestamp;
 
         private Multipart(String bucket, String key) {
             this.bucket = bucket;
