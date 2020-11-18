@@ -12,18 +12,13 @@ import com.carepay.aws.util.SimpleNamespaceContext;
 import org.xml.sax.InputSource;
 
 public class XPathResponseHandler implements ResponseHandler {
-    private static final XPath XPATH = XPathFactory.newInstance().newXPath();
-
-    static {
-        XPATH.setNamespaceContext(new SimpleNamespaceContext("s3", "http://s3.amazonaws.com/doc/2006-03-01/"));
-
-    }
-
     private final XPathExpression expression;
 
     public XPathResponseHandler(String expression) {
+        final XPath xpath = XPathFactory.newInstance().newXPath();
+        xpath.setNamespaceContext(new SimpleNamespaceContext("s3", "http://s3.amazonaws.com/doc/2006-03-01/"));
         try {
-            this.expression = XPATH.compile(expression);
+            this.expression = xpath.compile(expression);
         } catch (XPathExpressionException e) {
             throw new IllegalStateException(e);
         }
