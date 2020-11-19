@@ -4,6 +4,7 @@ import java.net.URL;
 import java.util.BitSet;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.PrimitiveIterator;
 import java.util.stream.Collectors;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
@@ -18,6 +19,8 @@ public final class QueryStringUtils {
             0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0,
             0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0,
             0x0, 0x1, 0x2, 0x3, 0x4, 0x5, 0x6, 0x7,
+
+
             0x8, 0x9, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0,
             0x0, 0xA, 0xB, 0xC, 0xD, 0xE, 0xF, 0x0,
             0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0,
@@ -87,8 +90,7 @@ public final class QueryStringUtils {
      */
     public static String uriEncode(String input) {
         final StringBuilder result = new StringBuilder();
-        final byte[] bytes = input.getBytes(UTF_8);
-        for (byte singleByte : bytes) {
+        for (byte singleByte : input.getBytes(UTF_8)) {
             final char ch = (char) singleByte;
             if (ENCODING_NOT_NEEDED.get(ch)) {
                 result.append(ch);
@@ -99,8 +101,8 @@ public final class QueryStringUtils {
         return result.toString();
     }
 
-    private static StringBuilder appendEncoded(StringBuilder result, char ch) {
-        return result.append('%').append(HEX_DIGITS_UPPER[(ch >> 4) & 0xf]).append(HEX_DIGITS_UPPER[ch & 0xf]);
+    private static void appendEncoded(StringBuilder result, char ch) {
+        result.append('%').append(HEX_DIGITS_UPPER[(ch >> 4) & 0xf]).append(HEX_DIGITS_UPPER[ch & 0xf]);
     }
 
     /**
@@ -129,20 +131,21 @@ public final class QueryStringUtils {
      * @param input the URI Encoded String
      */
     public static String uriDecode(final String input) {
-        final int len = input.length();
-        final byte[] buf = new byte[len];
-        int i = 0;
+        final byte[] bytes = new byte[input.length()];
+        final PrimitiveIterator.OfInt iter = input.chars().iterator();
         int j = 0;
-        char ch;
-        while (i < len) {
-            ch = input.charAt(i++);
-            if (ch == '%') {
-                ch = (char) (HEX_TO_CHAR[input.charAt(i)] << 4 | HEX_TO_CHAR[input.charAt(i + 1)]);
-                i += 2;
+        int ch;
+        while (iter.hasNext()) {
+            if ((ch = iter.nextInt()) == '%') {
+                ch = uriDecodeChar(iter);
             }
-            buf[j++] = (byte) ch;
+            bytes[j++] = (byte) ch;
         }
-        return new String(buf, 0, j, UTF_8);
+        return new String(bytes, 0, j, UTF_8);
+    }
+
+    protected static char uriDecodeChar(final PrimitiveIterator.OfInt iter) {
+        return (char) (HEX_TO_CHAR[iter.next()] << 4 | HEX_TO_CHAR[iter.next()]);
     }
 
     public static String getHostname(final URL url) {
@@ -154,6 +157,6 @@ public final class QueryStringUtils {
     }
 
     public static boolean hasCustomPort(final URL url) {
-        return url.getPort() > 0 && url.getPort() != url.getDefaultPort();
+        return url.getPort() > 0;
     }
 }

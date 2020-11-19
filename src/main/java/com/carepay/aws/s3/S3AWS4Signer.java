@@ -18,6 +18,6 @@ public class S3AWS4Signer extends AWS4Signer {
 
     @Override
     public void signHeaders(HttpURLConnection uc, byte[] payload, int offset, int length) {
-        super.signHeaders(uc, null, 0, -1);
+        super.signHeaders(uc, null, 0, -1); // set payload to null to ensure unsigned payload
     }
 }

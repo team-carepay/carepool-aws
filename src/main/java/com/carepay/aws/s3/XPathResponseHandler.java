@@ -9,14 +9,19 @@ import javax.xml.xpath.XPathExpressionException;
 import javax.xml.xpath.XPathFactory;
 
 import com.carepay.aws.util.SimpleNamespaceContext;
-import org.xml.sax.InputSource;
 
-public class XPathResponseHandler implements ResponseHandler {
-    private final XPathExpression expression;
+/**
+ * Helper class to extract information from a HttpURLConnection response.
+ */
+public class XPathResponseHandler {
+    protected final XPathExpression expression;
 
     public XPathResponseHandler(String expression) {
         final XPath xpath = XPathFactory.newInstance().newXPath();
-        xpath.setNamespaceContext(new SimpleNamespaceContext("s3", "http://s3.amazonaws.com/doc/2006-03-01/"));
+        xpath.setNamespaceContext(new SimpleNamespaceContext(
+                "s3", "http://s3.amazonaws.com/doc/2006-03-01/",
+                "ec2", "http://ec2.amazonaws.com/doc/2016-11-15/"
+        ));
         try {
             this.expression = xpath.compile(expression);
         } catch (XPathExpressionException e) {
@@ -24,17 +29,7 @@ public class XPathResponseHandler implements ResponseHandler {
         }
     }
 
-    @Override
-    public String extract(HttpURLConnection urlConnection) throws IOException {
-        try {
-            final InputStream inputStream = getInputStream(urlConnection);
-            return expression.evaluate(new InputSource(inputStream));
-        } catch (XPathExpressionException e) {
-            throw new IOException(e);
-        }
-    }
-
-    private InputStream getInputStream(HttpURLConnection urlConnection) throws IOException {
+    protected InputStream getInputStream(HttpURLConnection urlConnection) throws IOException {
         return urlConnection.getResponseCode() < 400 ? urlConnection.getInputStream() : urlConnection.getErrorStream();
     }
 }

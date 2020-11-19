@@ -7,9 +7,6 @@ import java.net.URL;
 import java.time.Clock;
 import java.time.Instant;
 import java.util.Map;
-import javax.xml.xpath.XPath;
-import javax.xml.xpath.XPathExpressionException;
-import javax.xml.xpath.XPathFactory;
 
 import com.carepay.aws.auth.AWS4Signer;
 import com.carepay.aws.auth.Credentials;
@@ -19,7 +16,6 @@ import org.junit.Test;
 import static java.time.ZoneOffset.UTC;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.Assert.fail;
-import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -39,11 +35,11 @@ public class EC2Test {
         outputStream = new ByteArrayOutputStream();
         when(urlConnection.getOutputStream()).thenReturn(outputStream);
         AWS4Signer signer = new AWS4Signer("ec2", () -> new Credentials("AKIDEXAMPLE", "wJalrXUtnFEMI/K7MDENG+bPxRfiCYEXAMPLEKEY", null), () -> "us-east-1", CLOCK);
-        ec2 = new EC2(signer, () -> "us-east-1", u -> urlConnection, XPathFactory.newInstance().newXPath());
+        ec2 = new EC2(signer, u -> urlConnection);
     }
 
     @Test
-    public void testDescribeTags() {
+    public void testDescribeTags() throws IOException {
         Map<String, String> tags = ec2.describeTags("i-12345");
         assertThat(tags).hasSize(7);
     }
@@ -51,10 +47,12 @@ public class EC2Test {
     @Test
     public void testDescribeTagsError() throws IOException {
         when(urlConnection.getResponseCode()).thenReturn(400);
+        when(urlConnection.getErrorStream()).thenReturn(getClass().getResourceAsStream("/ec2-describe-tags-error.xml"));
         try {
             ec2.describeTags("123");
             fail();
-        } catch (IllegalArgumentException e) {
+        } catch (IOException e) {
+            assertThat(e.getMessage()).isEqualTo("AWS was not able to validate the provided access credentials");
         }
     }
 
@@ -64,20 +62,8 @@ public class EC2Test {
         try {
             ec2.describeTags("123");
             fail();
-        } catch (IllegalArgumentException e) {
+        } catch (IOException e) {
+            assertThat(e.getMessage()).isEqualTo("test");
         }
     }
-
-    @Test
-    public void testDescribeTagsXpathException() throws XPathExpressionException {
-        XPath xpath = mock(XPath.class);
-        when(xpath.compile(anyString())).thenThrow(new XPathExpressionException("test"));
-        try {
-            new EC2(null, () -> "us-east-1", u -> urlConnection, xpath);
-            fail();
-        } catch (IllegalArgumentException e) {
-            // expected
-        }
-    }
-
 }
