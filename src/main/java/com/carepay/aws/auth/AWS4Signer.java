@@ -9,6 +9,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
 import java.util.WeakHashMap;
+import java.util.function.Consumer;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -24,7 +25,6 @@ import static java.time.ZoneOffset.UTC;
  * Supports signing AWS requests. See https://docs.aws.amazon.com/general/latest/gr/signing_aws_api_requests.html
  */
 public class AWS4Signer {
-    private static final Set<String> SERVICES_WITH_SECURITY_TOKEN = Stream.of("s3").collect(Collectors.toSet());
     private static final String X_AMZ_DATE = "X-Amz-Date";
     private static final String X_AMZ_CONTENT_SHA_256 = "X-Amz-Content-SHA256";
     private static final String X_AMZ_ALGORITHM = "X-Amz-Algorithm";
@@ -77,6 +77,10 @@ public class AWS4Signer {
         } catch (MalformedURLException e) {
             throw new IllegalArgumentException(e.getMessage(), e);
         }
+    }
+
+    protected Consumer<String> getAddSecurityTokenFunction(final SignRequest signRequest) {
+        return signRequest::addSecurityTokenToURLConnection;
     }
 
     /**
@@ -178,16 +182,16 @@ public class AWS4Signer {
         protected void addOptionalSecurityToken() {
             final String securityToken = credentials.getToken();
             if (securityToken != null) {
-                addSecurityToken(securityToken);
+                getAddSecurityTokenFunction(this).accept(securityToken);
             }
         }
 
-        private void addSecurityToken(String securityToken) {
-            if (SERVICES_WITH_SECURITY_TOKEN.contains(service)) {
-                signedHeaders.put(X_AMZ_SECURITY_TOKEN, securityToken);
-            } else {
-                urlConnection.setRequestProperty(X_AMZ_SECURITY_TOKEN, securityToken);
-            }
+        public void addSecurityTokenToSignedHeaders(final String securityToken) {
+            signedHeaders.put(X_AMZ_SECURITY_TOKEN, securityToken);
+        }
+
+        public void addSecurityTokenToURLConnection(final String securityToken) {
+            urlConnection.setRequestProperty(X_AMZ_SECURITY_TOKEN, securityToken);
         }
 
         private void addAuthorizationHeader(final byte[] signature) {

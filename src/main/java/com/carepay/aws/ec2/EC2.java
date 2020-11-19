@@ -43,8 +43,7 @@ public class EC2 extends AWSClient {
         final byte[] payLoad = (DESCRIBE_TAGS_PARAMS + instanceId).getBytes(UTF_8);
         final URL url = new URL("https://ec2." + getRegion() + ".amazonaws.com");
         final NodeList items = execute(url, "POST", payLoad, 0, payLoad.length, ITEM_RESPONSE_HANDLER);
-        final Map<String, String> tags = collectTags(items);
-        return tags;
+        return collectTags(items);
     }
 
     protected Map<String, String> collectTags(final NodeList items) {
