@@ -101,25 +101,6 @@ public class AWS4Signer {
         new SignRequest(uc).signHeaders(payload, offset, length);
     }
 
-    /**
-     * Returns the signing key, or creates a new signing-key if required.
-     *
-     * @param credentials the AWS credentials to use
-     * @param service     the name of the service
-     * @param region      the AWS region (e.g. us-east-1)
-     * @param dateStr     the date-string in YYYYMMDD format
-     */
-    protected byte[] getSigningKey(Credentials credentials, String service, String region, String dateStr) {
-        final String cacheKey = service + region + credentials.getAccessKeyId() + dateStr;
-        return keyCache.computeIfAbsent(cacheKey, key -> {
-            final byte[] kSecret = ("AWS4" + credentials.getSecretAccessKey()).getBytes(UTF_8);
-            final byte[] kDate = SHA256.sign(dateStr, kSecret);
-            final byte[] kRegion = SHA256.sign(region, kDate);
-            final byte[] kService = SHA256.sign(service, kRegion);
-            return SHA256.sign(AWS_4_REQUEST, kService);
-        });
-    }
-
     public RegionProvider getRegionProvider() {
         return regionProvider;
     }
@@ -152,6 +133,26 @@ public class AWS4Signer {
         }
 
         /**
+         * Returns the signing key, or creates a new signing-key if required.
+         */
+        protected byte[] getSigningKey() {
+            final String cacheKey = service + region + credentials.getAccessKeyId() + dateStr;
+            return keyCache.computeIfAbsent(cacheKey, key -> createSigningKey());
+        }
+
+        protected byte[] createSigningKey() {
+            final byte[] kSecret = getSecret();
+            final byte[] kDate = SHA256.sign(dateStr, kSecret);
+            final byte[] kRegion = SHA256.sign(region, kDate);
+            final byte[] kService = SHA256.sign(service, kRegion);
+            return SHA256.sign(AWS_4_REQUEST, kService);
+        }
+
+        private byte[] getSecret() {
+            return ("AWS4" + credentials.getSecretAccessKey()).getBytes(UTF_8);
+        }
+
+        /**
          * Signs the request with AWS4 Authorization header.
          *
          * @param payload the request body
@@ -160,21 +161,32 @@ public class AWS4Signer {
          */
         public void signHeaders(final byte[] payload, final int offset, final int length) {
             signedHeaders.put(X_AMZ_DATE, dateTimeStr);
-            addSecurityToken();
-            final String contentSha256 = calculateContentSha256(payload, offset, length);
+            addOptionalSecurityToken();
+            final String contentSha256 = length > 0 ? SHA256.hash(payload, offset, length) : UNSIGNED_PAYLOAD;
+            addOptionalContentSha256(contentSha256);
             final String stringToSign = getStringToSign(contentSha256);
-            final byte[] signature = SHA256.sign(stringToSign, getSigningKey(credentials, service, region, dateStr));
+            final byte[] signature = SHA256.sign(stringToSign, getSigningKey());
             addAuthorizationHeader(signature);
         }
 
-        protected void addSecurityToken() {
+        protected void addOptionalContentSha256(String contentSha256) {
+            if ("s3".equals(service)) {
+                signedHeaders.put(X_AMZ_CONTENT_SHA_256, contentSha256);
+            }
+        }
+
+        protected void addOptionalSecurityToken() {
             final String securityToken = credentials.getToken();
             if (securityToken != null) {
-                if (SERVICES_WITH_SECURITY_TOKEN.contains(service)) {
-                    signedHeaders.put(X_AMZ_SECURITY_TOKEN, securityToken);
-                } else {
-                    urlConnection.setRequestProperty(X_AMZ_SECURITY_TOKEN, securityToken);
-                }
+                addSecurityToken(securityToken);
+            }
+        }
+
+        private void addSecurityToken(String securityToken) {
+            if (SERVICES_WITH_SECURITY_TOKEN.contains(service)) {
+                signedHeaders.put(X_AMZ_SECURITY_TOKEN, securityToken);
+            } else {
+                urlConnection.setRequestProperty(X_AMZ_SECURITY_TOKEN, securityToken);
             }
         }
 
@@ -199,14 +211,6 @@ public class AWS4Signer {
             return String.join("\n", AWS_4_HMAC_SHA_256, dateTimeStr, scope, SHA256.hash(canonicalStringBuilder.toString()));
         }
 
-        private String calculateContentSha256(final byte[] payload, final int offset, final int length) {
-            final String contentSha256 = length < 0 ? UNSIGNED_PAYLOAD : SHA256.hash(payload, offset, length);
-            if ("s3".equals(service)) {
-                signedHeaders.put(X_AMZ_CONTENT_SHA_256, contentSha256);
-            }
-            return contentSha256;
-        }
-
         /**
          * Signs the request using query string parameters
          *
@@ -222,7 +226,7 @@ public class AWS4Signer {
             }
             queryParams.put(X_AMZ_SIGNED_HEADERS, String.join(";", signedHeaders.keySet()).toLowerCase());
             final String stringToSign = getStringToSign(SHA256.EMPTY_STRING_SHA256);
-            final byte[] signature = SHA256.sign(stringToSign, getSigningKey(credentials, service, region, dateStr));
+            final byte[] signature = SHA256.sign(stringToSign, getSigningKey());
             return url.getHost() + ":" + url.getPort() + url.getPath() + "?" + QueryStringUtils.toQueryString(queryParams) + "&X-Amz-Signature=" + Hex.encode(signature);
         }
     }

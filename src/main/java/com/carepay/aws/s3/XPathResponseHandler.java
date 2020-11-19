@@ -11,6 +11,9 @@ import javax.xml.xpath.XPathFactory;
 import com.carepay.aws.util.SimpleNamespaceContext;
 import org.xml.sax.InputSource;
 
+/**
+ * Helper class to extract information from a HttpURLConnection response.
+ */
 public class XPathResponseHandler implements ResponseHandler {
     private final XPathExpression expression;
 
