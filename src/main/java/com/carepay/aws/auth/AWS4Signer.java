@@ -162,7 +162,7 @@ public class AWS4Signer {
         public void signHeaders(final byte[] payload, final int offset, final int length) {
             signedHeaders.put(X_AMZ_DATE, dateTimeStr);
             addOptionalSecurityToken();
-            final String contentSha256 = length > 0 ? SHA256.hash(payload, offset, length) : UNSIGNED_PAYLOAD;
+            final String contentSha256 = length >= 0 ? SHA256.hash(payload, offset, length) : UNSIGNED_PAYLOAD;
             addOptionalContentSha256(contentSha256);
             final String stringToSign = getStringToSign(contentSha256);
             final byte[] signature = SHA256.sign(stringToSign, getSigningKey());

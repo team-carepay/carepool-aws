@@ -1,7 +1,6 @@
 package com.carepay.aws.s3;
 
 import java.io.IOException;
-import java.io.OutputStream;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.util.ArrayList;
@@ -11,6 +10,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 
+import com.carepay.aws.AWSClient;
 import com.carepay.aws.auth.AWS4Signer;
 import com.carepay.aws.util.URLOpener;
 
@@ -19,19 +19,17 @@ import static java.nio.charset.StandardCharsets.UTF_8;
 /**
  * S3 client using lightweight API.
  */
-public class S3 {
+public class S3 extends AWSClient {
 
     private static final String AMAZONAWS_COM = ".amazonaws.com";
     private static final String HTTPS = "https";
     private static final String SERVICE_S3 = "s3";
 
-    private static final ResponseHandler UPLOAD_ID_RESPONSE_HANDLER = new XPathResponseHandler("/s3:InitiateMultipartUploadResult/s3:UploadId");
-    private static final ResponseHandler ERROR_MESSAGE_RESPONSE_HANDLER = new XPathResponseHandler("/Error/Message");
-    private static final ResponseHandler ETAG_RESPONSE_HANDLER = uc -> uc.getHeaderField("ETag");
-    private static final ResponseHandler NOOP_RESPONSE_HANDLER = uc -> null;
+    private static final XPathStringResponseHandler UPLOAD_ID_RESPONSE_HANDLER = new XPathStringResponseHandler("/s3:InitiateMultipartUploadResult/s3:UploadId");
+    private static final XPathStringResponseHandler ERROR_MESSAGE_RESPONSE_HANDLER = new XPathStringResponseHandler("/Error/Message");
+    private static final ResponseHandler<String> ETAG_RESPONSE_HANDLER = uc -> uc.getHeaderField("ETag");
+    private static final ResponseHandler<Void> NOOP_RESPONSE_HANDLER = uc -> null;
 
-    private final AWS4Signer signer;
-    private final URLOpener opener;
     private final Map<String, Multipart> multiparts = new HashMap<>();
 
     public S3() {
@@ -39,64 +37,7 @@ public class S3 {
     }
 
     public S3(final AWS4Signer signer, final URLOpener opener) {
-        this.signer = signer;
-        this.opener = opener;
-    }
-
-    /**
-     * Executes the HTTP request. Signs the headers, uploads the payload and extracts the response
-     * information.
-     *
-     * @param url             the URL to visit
-     * @param method          HTTP method (e.g. GET, POST)
-     * @param payload         the request payload
-     * @param offset          offset in the payload
-     * @param length          length of the payload
-     * @param responseHandler function to extract information, e.g. UploadId or ETag
-     * @return the extracted information
-     * @throws IOException in case of network issues
-     */
-    protected String execute(final URL url, final String method, byte[] payload, int offset, int length, ResponseHandler responseHandler) throws IOException {
-        final HttpURLConnection uc = opener.open(url);
-        try {
-            uc.setRequestMethod(method);
-            execute(uc, payload, offset, length);
-            return responseHandler.extract(uc);
-        } finally {
-            uc.disconnect();
-        }
-    }
-
-    /**
-     * Executes the HTTP request. Signs the headers and uploads the payload.
-     *
-     * @param uc      the HTTP connection
-     * @param payload the request payload
-     * @param offset  offset in the payload
-     * @param length  length of the payload
-     * @return the extracted information
-     * @throws IOException in case of network issues
-     */
-    protected void execute(HttpURLConnection uc, byte[] payload, int offset, int length) throws IOException {
-        uc.setConnectTimeout(1000);
-        uc.setReadTimeout(1000);
-        signer.signHeaders(uc, payload, offset, length);
-        if (length > 0) {
-            try (OutputStream outputSteam = uc.getOutputStream()) {
-                outputSteam.write(payload, offset, length);
-            }
-        }
-        assertResponseCode(uc);
-    }
-
-    protected void assertResponseCode(HttpURLConnection uc) throws IOException {
-        if (hasFailed(uc)) {
-            throw new IOException(ERROR_MESSAGE_RESPONSE_HANDLER.extract(uc));
-        }
-    }
-
-    private boolean hasFailed(HttpURLConnection uc) throws IOException {
-        return uc.getResponseCode() >= 400;
+        super(signer, opener);
     }
 
     /**
@@ -113,15 +54,6 @@ public class S3 {
         multiparts.put(uploadId, new Multipart(bucket, path));
         expireMultipartUploads();
         return uploadId;
-    }
-
-    /**
-     * Helper method to retrieve the current region
-     *
-     * @return the AWS region
-     */
-    protected String getRegion() {
-        return signer.getRegionProvider().getRegion();
     }
 
     /**
@@ -142,7 +74,7 @@ public class S3 {
 
     protected Multipart getMultipart(String uploadId) {
         expireMultipartUploads();
-        return (Multipart) Optional.ofNullable(multiparts.get(uploadId)).orElseThrow(() -> new IllegalArgumentException(uploadId));
+        return Optional.ofNullable(multiparts.get(uploadId)).orElseThrow(() -> new IllegalArgumentException(uploadId));
     }
 
     /**
@@ -181,11 +113,16 @@ public class S3 {
     /**
      * Aborts multipart upload
      */
-    public void abortMultipartUpload(String uploadId) throws IOException {
+    public void abortMultipartUpload(final String uploadId) throws IOException {
         final Multipart multipart = getMultipart(uploadId);
         final URL url = new URL(HTTPS, String.join(".", multipart.bucket, "s3", getRegion(), AMAZONAWS_COM), multipart.key + "?UploadId=" + uploadId);
         execute(url, "DELETE", null, 0, -1, NOOP_RESPONSE_HANDLER);
         multiparts.remove(uploadId);
+    }
+
+    @Override
+    protected void handleFailedResponse(final HttpURLConnection uc) throws IOException {
+        throw new IOException(ERROR_MESSAGE_RESPONSE_HANDLER.extract(uc));
     }
 
     protected void expireMultipartUploads() {

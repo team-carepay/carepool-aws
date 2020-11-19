@@ -23,9 +23,8 @@ public class SimpleNamespaceContextTest {
         assertThat(context.getNamespaceURI(null)).isEqualTo(XMLConstants.NULL_NS_URI);
     }
 
-    @Test(expected = UnsupportedOperationException.class)
     public void getPrefix() {
-        context.getPrefix("http://ec2.amazonaws.com/doc/2016-11-15/");
+        assertThat(context.getPrefix("http://ec2.amazonaws.com/doc/2016-11-15/")).isEqualTo("ec2");
     }
 
     @Test(expected = UnsupportedOperationException.class)

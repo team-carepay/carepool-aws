@@ -7,6 +7,6 @@ import java.net.HttpURLConnection;
  * ResponseHandler is an interface used to extract information from an ongoing HttpURLConnection
  */
 @FunctionalInterface
-public interface ResponseHandler {
-    String extract(HttpURLConnection urlConnection) throws IOException;
+public interface ResponseHandler<T> {
+    T extract(HttpURLConnection urlConnection) throws IOException;
 }
