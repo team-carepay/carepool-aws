@@ -1,7 +1,6 @@
 package com.carepay.aws.auth;
 
 import java.net.HttpURLConnection;
-import java.net.MalformedURLException;
 import java.net.URL;
 import java.time.Clock;
 import java.time.format.DateTimeFormatter;
@@ -66,14 +65,6 @@ public class AWS4Signer {
         this.credentialsProvider = credentialsProvider;
         this.regionProvider = regionProvider;
         this.clock = clock;
-    }
-
-    static URL createURL(final String protocol, final String host, final int port, final String file) {
-        try {
-            return new URL(protocol, host, port, file);
-        } catch (MalformedURLException e) {
-            throw new IllegalArgumentException(e.getMessage(), e);
-        }
     }
 
     protected Consumer<String> getAddSecurityTokenFunction(final SignRequest signRequest) {
