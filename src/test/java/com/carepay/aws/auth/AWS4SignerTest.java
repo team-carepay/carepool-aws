@@ -19,6 +19,7 @@ import org.junit.Test;
 import org.mockito.ArgumentCaptor;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.Assert.fail;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -94,5 +95,20 @@ public class AWS4SignerTest {
         }
         assertThat(headers).containsEntry("Authorization","AWS4-HMAC-SHA256 Credential=AKIDEXAMPLE/20150830/us-east-1/service/aws4_request, SignedHeaders=host;x-amz-date, Signature=b97d918cfa904a5beff61c982a1b6f458b799221646efd99d3219ec94cdf2500");
 
+    }
+
+    @Test
+    public void testMissingCredentials() throws MalformedURLException {
+        AWS4Signer aws4signer = new AWS4Signer("ec2", () -> null, () -> "eu-west-1", CLOCK);
+        URL url = new URL("https://example.amazonaws.com/?Param1=value1&Param2=value2");
+        HttpURLConnection uc = mock(HttpURLConnection.class);
+        when(uc.getURL()).thenReturn(url);
+        when(uc.getRequestMethod()).thenReturn("GET");
+        try {
+            aws4signer.signHeaders(uc, null);
+            fail();
+        } catch (IllegalStateException e) {
+            // expected
+        }
     }
 }
