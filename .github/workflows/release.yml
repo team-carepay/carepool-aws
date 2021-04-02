@@ -11,6 +11,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
+        with:
+          token: ${{ secrets.RELEASE_TOKEN }}
       - uses: actions/setup-java@v1
         with:
           java-version: 11
@@ -23,5 +25,4 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-gradle-
       - uses: fregante/setup-git-user@v1
-      - name: Gradle Release
-        run: ./gradlew release
+      - run: ./gradlew release
