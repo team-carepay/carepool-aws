@@ -1,9 +1,9 @@
-name: Release automatically on each push to master branch
+name: release
 
 on:
   push:
     branches:
-    - main
+      - main
 
 jobs:
   build:
@@ -11,8 +11,6 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
-      #      with:
-      #        token: ${{ secrets.RELEASE_TOKEN }}
       - uses: actions/setup-java@v1
         with:
           java-version: 11
@@ -24,8 +22,8 @@ jobs:
           key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*') }}
           restore-keys: |
           ${{ runner.os }}-gradle-
-    - name: Build with Gradle
-      run: |
-        git config user.email "actions@users.noreply.github.com"
-        git config user.name "GitHub Actions"
-        ./gradlew release
+      - name: Gradle Release
+        run: |
+          git config user.email "actions@users.noreply.github.com"
+          git config user.name "GitHub Actions"
+          ./gradlew release
