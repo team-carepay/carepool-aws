@@ -39,7 +39,7 @@ uploadArchives {
         mavenDeployer {
             beforeDeployment { MavenDeployment deployment -> signing.signPom(deployment) }
 
-            repository(url: "https://oss.sonatype.org/service/local/staging/deploy/maven2/") {
+            repository(url: "https://s01.oss.sonatype.org/service/local/staging/deploy/maven2/") {
                 authentication(userName: sonatypeUsername, password: sonatypePassword)
             }
 
@@ -64,15 +64,6 @@ uploadArchives {
                     connection = 'scm:git:git://github.com/team-carepay/carepool-aws.git'
                     developerConnection = 'scm:git:git@github.com:team-carepay/carepool-aws.git'
                     url = 'https://github.com/team-carepay/carepool-aws'
-                }
-            }
-            repositories {
-                maven {
-                    url 'https://oss.sonatype.org/service/local/staging/deploy/maven2/'
-                    credentials {
-                        username = "${sonatypeUsername}"
-                        password = "${sonatypePassword}"
-                    }
                 }
             }
         }
