@@ -13,7 +13,7 @@ public class AWSClient {
     protected final AWS4Signer signer;
     protected final URLOpener opener;
 
-    public AWSClient(AWS4Signer signer, URLOpener opener) {
+    public AWSClient(final AWS4Signer signer, final URLOpener opener) {
         this.signer = signer;
         this.opener = opener;
     }
@@ -49,10 +49,9 @@ public class AWSClient {
      * @param payload the request payload
      * @param offset  offset in the payload
      * @param length  length of the payload
-     * @return the extracted information
      * @throws IOException in case of network issues
      */
-    protected void execute(HttpURLConnection uc, byte[] payload, int offset, int length) throws IOException {
+    protected void execute(final HttpURLConnection uc, final byte[] payload, final int offset, final int length) throws IOException {
         uc.setConnectTimeout(1000);
         uc.setReadTimeout(1000);
         signer.signHeaders(uc, payload, offset, length);
@@ -74,7 +73,7 @@ public class AWSClient {
         throw new IOException(uc.getResponseMessage());
     }
 
-    protected boolean hasFailed(HttpURLConnection uc) throws IOException {
+    protected boolean hasFailed(final HttpURLConnection uc) throws IOException {
         return uc.getResponseCode() >= 400;
     }
 

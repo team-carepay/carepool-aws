@@ -5,6 +5,7 @@ import java.net.URL;
 import java.time.Clock;
 import java.time.format.DateTimeFormatter;
 import java.util.Map;
+import java.util.Optional;
 import java.util.TreeMap;
 import java.util.WeakHashMap;
 import java.util.function.Consumer;
@@ -115,7 +116,7 @@ public class AWS4Signer {
             this.urlConnection = urlConnection;
             this.url = urlConnection.getURL();
             this.region = regionProvider.getRegion();
-            this.credentials = credentialsProvider.getCredentials();
+            this.credentials = Optional.ofNullable(credentialsProvider.getCredentials()).orElseThrow(() -> new IllegalStateException("No AWS credentials found"));
             this.dateTimeStr = AWS_DATE_FMT.format(clock.instant());
             this.dateStr = dateTimeStr.substring(0, 8);
             this.scope = String.join("/", dateStr, region, service, AWS_4_REQUEST);

@@ -1,63 +1,101 @@
 plugins {
     id 'java'
-    id 'maven-publish'
+    id 'maven'
+    id 'signing'
     id 'jacoco'
     id 'checkstyle'
     id 'org.sonarqube' version '2.7.1'
     id 'net.researchgate.release' version '2.8.1'
+    id 'io.codearte.nexus-staging' version '0.22.0'
 }
 
 group = 'com.carepay'
 
 java {
     withSourcesJar()
+    withJavadocJar()
     sourceCompatibility = JavaVersion.VERSION_1_8
     targetCompatibility = JavaVersion.VERSION_1_8
 }
 
 repositories {
     mavenCentral()
-    maven {
-        url 's3://cp-maven-repo/releases'
-        authentication {
-            awsIm(AwsImAuthentication)
-        }
-    }
 }
 
 dependencies {
-    implementation 'com.github.cliftonlabs:json-simple:3.1.1'
+    implementation(
+        'com.github.cliftonlabs:json-simple:3.1.1',
+    )
 
-    testImplementation 'junit:junit:4.12'
-    testImplementation 'org.assertj:assertj-core:3.13.2'
-    testImplementation 'org.mockito:mockito-core:2.28.2'
+    testImplementation(
+        'junit:junit:4.12',
+        'org.assertj:assertj-core:3.13.2',
+        'org.mockito:mockito-core:2.28.2',
+    )
 }
 
-publishing {
-    publications {
-        mavenJava(MavenPublication) {
-            from components.java
-        }
-    }
+uploadArchives {
     repositories {
-        maven {
-            url 's3://cp-maven-repo/releases'
-            authentication {
-                awsIm(AwsImAuthentication)
+        mavenDeployer {
+            beforeDeployment { MavenDeployment deployment -> signing.signPom(deployment) }
+
+            repository(url: "https://oss.sonatype.org/service/local/staging/deploy/maven2/") {
+                authentication(userName: sonatypeUsername, password: sonatypePassword)
+            }
+
+            pom.project {
+                name = 'Carepool AWS'
+                description = 'Light-weight implementation of AWS4 signer for Java'
+                url = 'https://github.com/team-carepay/carepool-aws'
+                licenses {
+                    license {
+                        name = 'The Apache License, Version 2.0'
+                        url = 'http://www.apache.org/licenses/LICENSE-2.0.txt'
+                    }
+                }
+                developers {
+                    developer {
+                        id = 'blagerweij'
+                        name = 'Barry Lagerweij'
+                        email = 'b.lagerweij@carepay.com'
+                    }
+                }
+                scm {
+                    connection = 'scm:git:git://github.com/team-carepay/carepool-aws.git'
+                    developerConnection = 'scm:git:git@github.com:team-carepay/carepool-aws.git'
+                    url = 'https://github.com/team-carepay/carepool-aws'
+                }
+            }
+            repositories {
+                maven {
+                    url 'https://oss.sonatype.org/service/local/staging/deploy/maven2/'
+                    credentials {
+                        username = "${sonatypeUsername}"
+                        password = "${sonatypePassword}"
+                    }
+                }
             }
         }
     }
 }
 
+signing {
+    required = { gradle.taskGraph.hasTask("uploadArchives") }
+    sign configurations.archives
+}
+
 checkstyle {
-    config = project.resources.text.fromUri('https://carepaydev.bitbucket.io/checkstyle-1.1.xml')
+    toolVersion = '8.41'
+    config = project.resources.text.fromUri('https://raw.githubusercontent.com/checkstyle/checkstyle/checkstyle-8.41/src/main/resources/google_checks.xml')
 }
 
 tasks.sonarqube.dependsOn tasks.jacocoTestReport
 jacocoTestReport {
-    reports {
-        xml.enabled true
-    }
+    reports.xml.enabled true
+}
+
+artifacts {
+    archives javadocJar, sourcesJar
 }
 
 release {
@@ -68,4 +106,6 @@ release {
     }
 }
 
-afterReleaseBuild.dependsOn publish
+nexusStaging {
+    stagingProfileId = '58ec39c9c6418'
+}
