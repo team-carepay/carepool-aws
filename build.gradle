@@ -1,12 +1,13 @@
 plugins {
-    id 'java'
-    id 'maven'
+    id 'java-library'
+    id 'maven-publish'
     id 'signing'
     id 'jacoco'
     id 'checkstyle'
+
     id 'org.sonarqube' version '2.7.1'
     id 'net.researchgate.release' version '2.8.1'
-    id 'io.codearte.nexus-staging' version '0.22.0'
+    id 'io.github.gradle-nexus.publish-plugin' version '1.0.0'
 }
 
 group = 'com.carepay'
@@ -34,16 +35,11 @@ dependencies {
     )
 }
 
-uploadArchives {
-    repositories {
-        mavenDeployer {
-            beforeDeployment { MavenDeployment deployment -> signing.signPom(deployment) }
-
-            repository(url: "https://s01.oss.sonatype.org/service/local/staging/deploy/maven2/") {
-                authentication(userName: sonatypeUsername, password: sonatypePassword)
-            }
-
-            pom.project {
+publishing {
+    publications {
+        mavenJava(MavenPublication) {
+            from components.java
+            pom {
                 name = 'Carepool AWS'
                 description = 'Light-weight implementation of AWS4 signer for Java'
                 url = 'https://github.com/team-carepay/carepool-aws'
@@ -71,8 +67,8 @@ uploadArchives {
 }
 
 signing {
-    required = { gradle.taskGraph.hasTask("uploadArchives") }
-    sign configurations.archives
+    required = { gradle.taskGraph.hasTask("publish") }
+    sign publishing.publications.mavenJava
 }
 
 checkstyle {
@@ -97,6 +93,11 @@ release {
     }
 }
 
-nexusStaging {
-    stagingProfileId = '58ec39c9c6418'
+nexusPublishing {
+    repositories {
+        sonatype {
+            nexusUrl.set(uri("https://s01.oss.sonatype.org/service/local/"))
+            stagingProfileId = '10134d502bbe18'
+        }
+    }
 }
