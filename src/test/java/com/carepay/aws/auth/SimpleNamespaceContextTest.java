@@ -3,15 +3,16 @@ package com.carepay.aws.auth;
 import javax.xml.XMLConstants;
 
 import com.carepay.aws.util.SimpleNamespaceContext;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 public class SimpleNamespaceContextTest {
     private SimpleNamespaceContext context;
 
-    @Before
+    @BeforeEach
     public void setUp() {
         context = new SimpleNamespaceContext("ec2", "http://ec2.amazonaws.com/doc/2016-11-15/");
     }
@@ -23,12 +24,13 @@ public class SimpleNamespaceContextTest {
         assertThat(context.getNamespaceURI(null)).isEqualTo(XMLConstants.NULL_NS_URI);
     }
 
+    @Test
     public void getPrefix() {
         assertThat(context.getPrefix("http://ec2.amazonaws.com/doc/2016-11-15/")).isEqualTo("ec2");
     }
 
-    @Test(expected = UnsupportedOperationException.class)
+    @Test
     public void getPrefixes() {
-        context.getPrefixes("http://ec2.amazonaws.com/doc/2016-11-15/");
+        assertThatThrownBy(() -> context.getPrefixes("http://ec2.amazonaws.com/doc/2016-11-15/")).isInstanceOf(UnsupportedOperationException.class);
     }
 }

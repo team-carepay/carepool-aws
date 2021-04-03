@@ -6,8 +6,8 @@ import java.net.URISyntaxException;
 import java.time.Clock;
 import java.time.Instant;
 
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import static java.time.ZoneOffset.UTC;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -19,7 +19,7 @@ public class ProfileRegionProviderTest {
 
     private ProfileRegionProvider provider;
 
-    @Before
+    @BeforeEach
     public void setUp() throws URISyntaxException {
         this.provider = new ProfileRegionProvider(PROFILE_FILE, n -> null);
     }

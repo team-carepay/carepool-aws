@@ -2,10 +2,10 @@ package com.carepay.aws.s3;
 
 import java.io.IOException;
 
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
-import static org.junit.Assert.fail;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
@@ -15,7 +15,7 @@ public class S3OutputStreamTest {
     private S3OutputStream victim;
     private S3 s3;
 
-    @Before
+    @BeforeEach
     public void setUp() throws IOException {
         s3 = mock(S3.class);
         when(s3.startMultipart(anyString(), anyString())).thenReturn("123");
@@ -33,12 +33,7 @@ public class S3OutputStreamTest {
     @Test
     public void testFailWhenWritingToClosedFile() throws IOException {
         victim.close();
-        try {
-            victim.write('a');
-            fail();
-        } catch (IllegalStateException e) {
-            // expected
-        }
+        assertThatThrownBy(() -> victim.write('a')).isInstanceOf(IllegalStateException.class);
     }
 
     @Test

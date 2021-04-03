@@ -10,13 +10,13 @@ import java.time.Instant;
 
 import com.carepay.aws.auth.AWS4Signer;
 import com.carepay.aws.auth.Credentials;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.time.ZoneOffset.UTC;
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.junit.Assert.fail;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
@@ -30,7 +30,7 @@ public class S3Test {
     private HttpURLConnection urlConnection;
     private ByteArrayOutputStream outputStream;
 
-    @Before
+    @BeforeEach
     public void setUp() throws IOException {
         urlConnection = mock(HttpURLConnection.class);
         when(urlConnection.getURL()).thenReturn(new URL("https://testbucket.s3.us-east-1.amazonaws.com/testkey.png"));
@@ -54,12 +54,9 @@ public class S3Test {
         when(urlConnection.getResponseCode()).thenReturn(400);
         when(urlConnection.getRequestMethod()).thenReturn("GET");
         when(urlConnection.getErrorStream()).thenReturn(new ByteArrayInputStream("<Error><Message>Test</Message></Error>".getBytes(UTF_8)));
-        try {
-            s3.putObject("testbucket", "testkey.png", new byte[]{0x01}, 0, 1);
-            fail();
-        } catch (IOException e) {
-            assertThat(e.getMessage()).isEqualTo("Test");
-        }
+        assertThatThrownBy(() -> s3.putObject("testbucket", "testkey.png", new byte[]{0x01}, 0, 1))
+                .isInstanceOf(IOException.class)
+                .hasMessage("Test");
     }
 
     @Test
@@ -67,12 +64,9 @@ public class S3Test {
         when(urlConnection.getResponseCode()).thenReturn(400);
         when(urlConnection.getRequestMethod()).thenReturn("GET");
         when(urlConnection.getErrorStream()).thenReturn(new ByteArrayInputStream("Broken".getBytes(UTF_8)));
-        try {
-            s3.putObject("testbucket", "testkey.png", new byte[]{0x01}, 0, 1);
-            fail();
-        } catch (IOException e) {
-            assertThat(e.getMessage()).containsIgnoringCase("xml");
-        }
+        assertThatThrownBy(() -> s3.putObject("testbucket", "testkey.png", new byte[]{0x01}, 0, 1))
+                .isInstanceOf(IOException.class)
+                .hasMessageContaining("xml");
     }
 
     @Test
@@ -100,12 +94,9 @@ public class S3Test {
         when(urlConnection.getResponseCode()).thenReturn(400);
         when(urlConnection.getRequestMethod()).thenReturn("POST");
         when(urlConnection.getErrorStream()).thenReturn(new ByteArrayInputStream("<Error><Message>Test</Message></Error>".getBytes(UTF_8)));
-        try {
-            s3.startMultipart("testbucket", "testkey2.png");
-            fail();
-        } catch (IOException e) {
-            assertThat(e.getMessage()).isEqualTo("Test");
-        }
+        assertThatThrownBy(() -> s3.startMultipart("testbucket", "testkey2.png"))
+                .isInstanceOf(IOException.class)
+                .hasMessage("Test");
     }
 
     @Test
@@ -113,12 +104,9 @@ public class S3Test {
         when(urlConnection.getResponseCode()).thenReturn(400);
         when(urlConnection.getRequestMethod()).thenReturn("GET");
         when(urlConnection.getErrorStream()).thenReturn(new ByteArrayInputStream("Broken".getBytes(UTF_8)));
-        try {
-            s3.startMultipart("testbucket", "testkey2.png");
-            fail();
-        } catch (IOException e) {
-            assertThat(e.getMessage()).containsIgnoringCase("xml");
-        }
+        assertThatThrownBy(() -> s3.startMultipart("testbucket", "testkey2.png"))
+                .isInstanceOf(IOException.class)
+                .hasMessageContaining("xml");
     }
 
     @Test
@@ -140,12 +128,9 @@ public class S3Test {
         when(urlConnection.getResponseCode()).thenReturn(400);
         when(urlConnection.getRequestMethod()).thenReturn("DELETE");
         when(urlConnection.getErrorStream()).thenReturn(new ByteArrayInputStream("<Error><Message>Test</Message></Error>".getBytes(UTF_8)));
-        try {
-            s3.abortMultipartUpload(uploadId);
-            fail();
-        } catch (IOException e) {
-            assertThat(e.getMessage()).isEqualTo("Test");
-        }
+        assertThatThrownBy(() -> s3.abortMultipartUpload(uploadId))
+                .isInstanceOf(IOException.class)
+                .hasMessage("Test");
     }
 
     @Test
@@ -157,12 +142,9 @@ public class S3Test {
         when(urlConnection.getResponseCode()).thenReturn(400);
         when(urlConnection.getRequestMethod()).thenReturn("DELETE");
         when(urlConnection.getErrorStream()).thenReturn(new ByteArrayInputStream("Invalid".getBytes(UTF_8)));
-        try {
-            s3.abortMultipartUpload(uploadId);
-            fail();
-        } catch (IOException e) {
-            assertThat(e.getMessage()).containsIgnoringCase("xml");
-        }
+        assertThatThrownBy(() -> s3.abortMultipartUpload(uploadId))
+                .isInstanceOf(IOException.class)
+                .hasMessageContaining("xml");
     }
 
     @Test
@@ -174,12 +156,9 @@ public class S3Test {
         when(urlConnection.getResponseCode()).thenReturn(400);
         when(urlConnection.getRequestMethod()).thenReturn("PUT");
         when(urlConnection.getErrorStream()).thenReturn(new ByteArrayInputStream("<Error><Message>Test</Message></Error>".getBytes(UTF_8)));
-        try {
-            s3.uploadPart(uploadId, new byte[]{1}, 0, 1);
-            fail();
-        } catch (IOException e) {
-            assertThat(e.getMessage()).isEqualTo("Test");
-        }
+        assertThatThrownBy(() -> s3.uploadPart(uploadId, new byte[]{1}, 0, 1))
+                .isInstanceOf(IOException.class)
+                .hasMessage("Test");
     }
 
     @Test
@@ -191,12 +170,9 @@ public class S3Test {
         when(urlConnection.getResponseCode()).thenReturn(400);
         when(urlConnection.getRequestMethod()).thenReturn("PUT");
         when(urlConnection.getErrorStream()).thenReturn(new ByteArrayInputStream("Invalid".getBytes(UTF_8)));
-        try {
-            s3.uploadPart(uploadId, new byte[]{1}, 0, 1);
-            fail();
-        } catch (IOException e) {
-            assertThat(e.getMessage()).containsIgnoringCase("xml");
-        }
+        assertThatThrownBy(() -> s3.uploadPart(uploadId, new byte[]{1}, 0, 1))
+                .isInstanceOf(IOException.class)
+                .hasMessageContaining("xml");
     }
 
     @Test
@@ -207,12 +183,9 @@ public class S3Test {
         String uploadId = s3.startMultipart("testbucket", "testkey2.png");
         when(urlConnection.getResponseCode()).thenReturn(400);
         when(urlConnection.getErrorStream()).thenReturn(new ByteArrayInputStream("<Error><Message>Test</Message></Error>".getBytes(UTF_8)));
-        try {
-            s3.finishMultipart(uploadId);
-            fail();
-        } catch (IOException e) {
-            assertThat(e.getMessage()).isEqualTo("Test");
-        }
+        assertThatThrownBy(() -> s3.finishMultipart(uploadId))
+                .isInstanceOf(IOException.class)
+                .hasMessage("Test");
     }
 
     @Test
@@ -223,11 +196,8 @@ public class S3Test {
         String uploadId = s3.startMultipart("testbucket", "testkey2.png");
         when(urlConnection.getResponseCode()).thenReturn(400);
         when(urlConnection.getErrorStream()).thenReturn(new ByteArrayInputStream("Invalid".getBytes(UTF_8)));
-        try {
-            s3.finishMultipart(uploadId);
-            fail();
-        } catch (IOException e) {
-            assertThat(e.getMessage()).containsIgnoringCase("xml");
-        }
+        assertThatThrownBy(() -> s3.finishMultipart(uploadId))
+                .isInstanceOf(IOException.class)
+                .hasMessageContaining("xml");
     }
 }

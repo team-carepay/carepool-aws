@@ -10,12 +10,12 @@ import java.util.Map;
 
 import com.carepay.aws.auth.AWS4Signer;
 import com.carepay.aws.auth.Credentials;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import static java.time.ZoneOffset.UTC;
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.junit.Assert.fail;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -26,7 +26,7 @@ public class EC2Test {
     private HttpURLConnection urlConnection;
     private ByteArrayOutputStream outputStream;
 
-    @Before
+    @BeforeEach
     public void setUp() throws IOException {
         urlConnection = mock(HttpURLConnection.class);
         when(urlConnection.getRequestMethod()).thenReturn("GET");
@@ -48,22 +48,16 @@ public class EC2Test {
     public void testDescribeTagsError() throws IOException {
         when(urlConnection.getResponseCode()).thenReturn(400);
         when(urlConnection.getErrorStream()).thenReturn(getClass().getResourceAsStream("/ec2-describe-tags-error.xml"));
-        try {
-            ec2.describeTags("123");
-            fail();
-        } catch (IOException e) {
-            assertThat(e.getMessage()).isEqualTo("AWS was not able to validate the provided access credentials");
-        }
+        assertThatThrownBy(() -> ec2.describeTags("123"))
+                .isInstanceOf(IOException.class)
+                .hasMessage("AWS was not able to validate the provided access credentials");
     }
 
     @Test
     public void testDescribeTagsIOException() throws IOException {
         when(urlConnection.getInputStream()).thenThrow(new IOException("test"));
-        try {
-            ec2.describeTags("123");
-            fail();
-        } catch (IOException e) {
-            assertThat(e.getMessage()).isEqualTo("test");
-        }
+        assertThatThrownBy(() -> ec2.describeTags("123"))
+                .isInstanceOf(IOException.class)
+                .hasMessage("test");
     }
 }

@@ -6,8 +6,8 @@ import java.time.Clock;
 import java.time.Instant;
 
 import com.carepay.aws.auth.Credentials;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import static com.carepay.aws.ec2.EC2CredentialsProvider.SECURITY_CREDENTIALS_URL;
 import static java.time.ZoneOffset.UTC;
@@ -19,7 +19,7 @@ public class EC2CredentialsProviderTest {
     private EC2CredentialsProvider credentialsProvider;
     private ResourceFetcher ec2metadata;
 
-    @Before
+    @BeforeEach
     public void setUp() throws IOException {
         Clock clock = Clock.fixed(Instant.parse("2015-08-30T12:36:00.00Z"), UTC);
         HttpURLConnection ucRole = mock(HttpURLConnection.class);

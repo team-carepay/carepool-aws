@@ -6,10 +6,10 @@ import java.net.HttpURLConnection;
 import java.net.MalformedURLException;
 import java.net.URL;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.junit.Assert.fail;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -25,12 +25,7 @@ public class EC2MetaDataTest {
     @Test
     public void testCreateURL() throws MalformedURLException {
         assertThat(EC2MetaData.createURL("https://host.com")).isEqualTo(new URL("https://host.com"));
-        try {
-            EC2MetaData.createURL("johndoe");
-            fail();
-        } catch (IllegalArgumentException e) {
-            // expected
-        }
+        assertThatThrownBy(() -> EC2MetaData.createURL("johndoe")).isInstanceOf(IllegalArgumentException.class);
     }
 
     @Test

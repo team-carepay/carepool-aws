@@ -3,9 +3,9 @@ package com.carepay.aws.auth;
 import java.util.Optional;
 import java.util.Properties;
 
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -14,7 +14,7 @@ public class DefaultCredentialsProviderChainTest {
     private Properties oldProperties;
     private DefaultCredentialsProviderChain credentialsProviderChain;
 
-    @Before
+    @BeforeEach
     public void setUp() {
         oldProperties = System.getProperties();
         System.setProperty("aws.accessKeyId", "abc");
@@ -23,7 +23,7 @@ public class DefaultCredentialsProviderChainTest {
         credentialsProviderChain = new DefaultCredentialsProviderChain();
     }
 
-    @After
+    @AfterEach
     public void tearDown() {
         System.setProperties(oldProperties);
     }

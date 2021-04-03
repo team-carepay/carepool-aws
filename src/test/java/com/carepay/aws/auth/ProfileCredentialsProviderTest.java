@@ -6,8 +6,8 @@ import java.net.URI;
 import java.time.Clock;
 import java.time.Instant;
 
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import static java.time.ZoneOffset.UTC;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -19,7 +19,7 @@ public class ProfileCredentialsProviderTest {
     private ProfileCredentialsProvider credentialsProvider;
     private HttpURLConnection uc;
 
-    @Before
+    @BeforeEach
     public void setUp() {
         uc = mock(HttpURLConnection.class);
         credentialsProvider = new ProfileCredentialsProvider(CREDENTIALS_FILE, n -> null, CLOCK, u -> uc);

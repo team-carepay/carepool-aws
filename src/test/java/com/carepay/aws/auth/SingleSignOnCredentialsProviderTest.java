@@ -10,8 +10,8 @@ import java.util.HashMap;
 import java.util.Map;
 
 import com.carepay.aws.util.URLOpener;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import static java.time.ZoneOffset.UTC;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -27,7 +27,7 @@ public class SingleSignOnCredentialsProviderTest {
     private HttpURLConnection uc = mock(HttpURLConnection.class);
     private File awsDir;
 
-    @Before
+    @BeforeEach
     public void setUp() throws URISyntaxException {
         awsDir = new File(getClass().getResource("/homedir/.aws").toURI());
     }

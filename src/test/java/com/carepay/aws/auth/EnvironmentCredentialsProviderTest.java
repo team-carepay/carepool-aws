@@ -2,8 +2,8 @@ package com.carepay.aws.auth;
 
 import java.util.Properties;
 
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -11,7 +11,7 @@ public class EnvironmentCredentialsProviderTest {
 
     private EnvironmentCredentialsProvider environmentAWSCredentialsProvider;
 
-    @Before
+    @BeforeEach
     public void setUp() {
         Properties environmentProperties = new Properties();
         environmentProperties.put("AWS_ACCESS_KEY_ID", "AKIDEXAMPLE");

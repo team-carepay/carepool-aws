@@ -2,8 +2,8 @@ package com.carepay.aws.ec2;
 
 import java.net.HttpURLConnection;
 
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
@@ -14,7 +14,7 @@ public class EC2RegionProviderTest {
     private EC2RegionProvider provider;
     private HttpURLConnection uc;
 
-    @Before
+    @BeforeEach
     public void setUp() throws Exception {
         uc = mock(HttpURLConnection.class);
         when(uc.getInputStream()).thenReturn(getClass().getResourceAsStream("/metadata.json"));

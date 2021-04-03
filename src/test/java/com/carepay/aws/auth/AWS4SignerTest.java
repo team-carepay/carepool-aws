@@ -14,12 +14,12 @@ import java.util.Map;
 
 import com.carepay.aws.util.Hex;
 import com.carepay.aws.util.SHA256;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.junit.Assert.fail;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -30,7 +30,7 @@ public class AWS4SignerTest {
     private static final Clock CLOCK = Clock.fixed(Instant.parse("2018-09-19T16:02:42.00Z"), ZoneId.of("UTC"));
     private AWS4Signer signer;
 
-    @Before
+    @BeforeEach
     public void setUp() {
         Credentials credentials = new Credentials("AKIDEXAMPLE", "wJalrXUtnFEMI/K7MDENG+bPxRfiCYEXAMPLEKEY", "SeSsIoNtOkEn");
         signer = new AWS4Signer("ec2", () -> credentials, () -> "eu-west-1", CLOCK);
@@ -104,11 +104,8 @@ public class AWS4SignerTest {
         HttpURLConnection uc = mock(HttpURLConnection.class);
         when(uc.getURL()).thenReturn(url);
         when(uc.getRequestMethod()).thenReturn("GET");
-        try {
+        assertThatThrownBy(() -> {
             aws4signer.signHeaders(uc, null);
-            fail();
-        } catch (IllegalStateException e) {
-            // expected
-        }
+        }).isInstanceOf(IllegalStateException.class);
     }
 }
