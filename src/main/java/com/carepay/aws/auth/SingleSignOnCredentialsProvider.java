@@ -30,7 +30,7 @@ public class SingleSignOnCredentialsProvider implements CredentialsProvider {
 
     private static final DateTimeFormatter EXPIRES_FORMAT = new DateTimeFormatterBuilder()
             .append(DateTimeFormatter.ISO_LOCAL_DATE_TIME)
-            .appendLiteral("UTC")
+            .appendZoneId()
             .toFormatter()
             .withZone(ZoneId.of("UTC"));
     static final String SSO_START_URL = "sso_start_url";
