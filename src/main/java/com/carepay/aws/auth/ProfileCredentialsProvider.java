@@ -19,40 +19,56 @@ public class ProfileCredentialsProvider implements CredentialsProvider {
     private static final String AWS_PROFILE = "AWS_PROFILE";
     private static final String DEFAULT = "default";
 
-    private final CredentialsProvider delegateCredentialProvider;
+    private final File file;
+    private final Env env;
     private final Clock clock;
+    private final URLOpener opener;
     private Credentials lastCredentials;
 
     public ProfileCredentialsProvider() {
         this(new File(new File(System.getProperty(USER_HOME)), AWS_CONFIG_FILENAME), new Env.Default(), Clock.systemDefaultZone(), new URLOpener.Default());
     }
 
-    public ProfileCredentialsProvider(final File profileFile, final Env env, final Clock clock, final URLOpener opener) {
-        final IniFile iniFile = new IniFile(profileFile);
-        String profileName = Optional.ofNullable(env.getEnv(AWS_PROFILE))
-                .orElseGet(() -> Optional.ofNullable(System.getProperty("aws.profile")).orElse(DEFAULT));
-        final Map<String, String> section = Optional.ofNullable(
-                iniFile.getSection(profileName))
-                .orElseGet(
-                        () -> Optional.ofNullable(
-                                iniFile.getSection(DEFAULT))
-                                .orElse(Collections.emptyMap())
-                );
-        if (section.containsKey(SingleSignOnCredentialsProvider.SSO_START_URL)) {
-            delegateCredentialProvider = new SingleSignOnCredentialsProvider(profileFile.getParentFile(), section, clock, opener);
-        } else if (section.containsKey(ProcessCredentialsProvider.CREDENTIAL_PROCESS)) {
-            delegateCredentialProvider = new ProcessCredentialsProvider(section);
-        } else {
-            delegateCredentialProvider = new StaticProfileCredentialsProvider(new File(profileFile.getParentFile(), "credentials"), profileName);
-        }
+    public ProfileCredentialsProvider(final File file, final Env env, final Clock clock, final URLOpener opener) {
+        this.file = file;
+        this.env = env;
         this.clock = clock;
+        this.opener = opener;
     }
 
     @Override
     public Credentials getCredentials() {
-        if (lastCredentials == null || (lastCredentials.getExpiration() != null && lastCredentials.getExpiration().isBefore(clock.instant()))) {
-            lastCredentials = delegateCredentialProvider.getCredentials();
+        if (hasCachedCredentials()) {
+            final String profileName = Optional.ofNullable(env.getEnv(AWS_PROFILE))
+                    .orElseGet(() -> Optional.ofNullable(System.getProperty("aws.profile")).orElse(DEFAULT));
+            final Map<String, String> section = getIniFileSection(profileName);
+            lastCredentials = getDelegateCredentialsProvider(profileName, section).getCredentials();
         }
         return lastCredentials;
+    }
+
+    private boolean hasCachedCredentials() {
+        return lastCredentials == null || (lastCredentials.getExpiration() != null && lastCredentials.getExpiration().isBefore(clock.instant()));
+    }
+
+    private Map<String, String> getIniFileSection(String profileName) {
+        final IniFile iniFile = new IniFile(file);
+        return Optional.ofNullable(
+                        iniFile.getSection(profileName))
+                .orElseGet(
+                        () -> Optional.ofNullable(
+                                        iniFile.getSection(DEFAULT))
+                                .orElse(Collections.emptyMap())
+                );
+    }
+
+    private CredentialsProvider getDelegateCredentialsProvider(String profileName, Map<String, String> section) {
+        if (section.containsKey(SingleSignOnCredentialsProvider.SSO_START_URL)) {
+            return new SingleSignOnCredentialsProvider(file.getParentFile(), section, clock, opener);
+        } else if (section.containsKey(ProcessCredentialsProvider.CREDENTIAL_PROCESS)) {
+            return new ProcessCredentialsProvider(section);
+        } else {
+            return new StaticProfileCredentialsProvider(new File(file.getParentFile(), "credentials"), profileName);
+        }
     }
 }
