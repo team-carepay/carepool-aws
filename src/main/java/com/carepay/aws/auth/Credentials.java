@@ -9,29 +9,33 @@ import java.time.format.DateTimeFormatter;
 public class Credentials {
     private final String accessKeyId;
     private final String secretAccessKey;
-    private final String token;
+    private final String sessionToken;
     private final Instant expiration;
 
-    public Credentials(final String accessKeyId,
-                       final String secretAccessKey,
-                       final String token) {
-        this(accessKeyId, secretAccessKey, token, (Instant) null);
+    public Credentials() {
+        this(null, null, null, (Instant) null);
     }
 
     public Credentials(final String accessKeyId,
                        final String secretAccessKey,
-                       final String token,
+                       final String sessionToken) {
+        this(accessKeyId, secretAccessKey, sessionToken, (Instant) null);
+    }
+
+    public Credentials(final String accessKeyId,
+                       final String secretAccessKey,
+                       final String sessionToken,
                        final String expiration) {
-        this(accessKeyId, secretAccessKey, token, expiration != null ? DateTimeFormatter.ISO_INSTANT.parse(expiration, Instant::from) : null);
+        this(accessKeyId, secretAccessKey, sessionToken, expiration != null ? DateTimeFormatter.ISO_INSTANT.parse(expiration, Instant::from) : null);
     }
 
     public Credentials(final String accessKeyId,
                        final String secretAccessKey,
-                       final String token,
+                       final String sessionToken,
                        final Instant expiration) {
         this.accessKeyId = accessKeyId;
         this.secretAccessKey = secretAccessKey;
-        this.token = token;
+        this.sessionToken = sessionToken;
         this.expiration = expiration;
     }
 
@@ -47,8 +51,8 @@ public class Credentials {
         return secretAccessKey;
     }
 
-    public String getToken() {
-        return token;
+    public String getSessionToken() {
+        return sessionToken;
     }
 
     public Instant getExpiration() {
@@ -56,6 +60,6 @@ public class Credentials {
     }
 
     public boolean hasToken() {
-        return this.token != null;
+        return this.sessionToken != null;
     }
 }

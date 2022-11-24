@@ -1,80 +1,52 @@
 package com.carepay.aws;
 
 import java.io.IOException;
-import java.io.OutputStream;
 import java.net.HttpURLConnection;
 import java.net.URL;
+import java.util.Map;
+import javax.xml.parsers.ParserConfigurationException;
+import javax.xml.parsers.SAXParser;
+import javax.xml.parsers.SAXParserFactory;
 
 import com.carepay.aws.auth.AWS4Signer;
-import com.carepay.aws.s3.ResponseHandler;
-import com.carepay.aws.util.URLOpener;
+import com.carepay.aws.net.MockHttpURLConnection;
+import com.carepay.aws.net.RequestWriter;
+import com.carepay.aws.net.ResponseReader;
+import com.carepay.aws.net.URLOpener;
+import com.carepay.aws.net.WebClient;
+import org.xml.sax.SAXException;
 
-public class AWSClient {
+public class AWSClient extends WebClient {
     protected final AWS4Signer signer;
-    protected final URLOpener opener;
+
+    protected static final SAXParser SAX_PARSER;
+
+    static {
+        try {
+            SAXParserFactory factory = SAXParserFactory.newInstance();
+            SAX_PARSER = factory.newSAXParser();
+        } catch (ParserConfigurationException | SAXException e) {
+            throw new IllegalArgumentException(e);
+        }
+    }
 
     public AWSClient(final AWS4Signer signer, final URLOpener opener) {
+        super(opener);
         this.signer = signer;
-        this.opener = opener;
     }
 
     /**
      * Executes the HTTP request. Signs the headers, uploads the payload and extracts the response
      * information.
      *
-     * @param url             the URL to visit
-     * @param method          HTTP method (e.g. GET, POST)
-     * @param payload         the request payload
-     * @param offset          offset in the payload
-     * @param length          length of the payload
-     * @param responseHandler function to extract information, e.g. UploadId or ETag
+     * @param url    the URL to visit
+     * @param method HTTP method (e.g. GET, POST)
+     * @param reader function to extract information, e.g. UploadId or ETag
      * @return the extracted information
      * @throws IOException in case of network issues
      */
-    protected <T> T execute(final URL url, final String method, byte[] payload, int offset, int length, ResponseHandler<T> responseHandler) throws IOException {
-        final HttpURLConnection uc = opener.open(url);
-        try {
-            uc.setRequestMethod(method);
-            execute(uc, payload, offset, length);
-            return responseHandler.extract(uc);
-        } finally {
-            uc.disconnect();
-        }
-    }
-
-    /**
-     * Executes the HTTP request. Signs the headers and uploads the payload.
-     *
-     * @param uc      the HTTP connection
-     * @param payload the request payload
-     * @param offset  offset in the payload
-     * @param length  length of the payload
-     * @throws IOException in case of network issues
-     */
-    protected void execute(final HttpURLConnection uc, final byte[] payload, final int offset, final int length) throws IOException {
-        uc.setConnectTimeout(1000);
-        uc.setReadTimeout(1000);
-        signer.signHeaders(uc, payload, offset, length);
-        if (length > 0) {
-            try (OutputStream outputSteam = uc.getOutputStream()) {
-                outputSteam.write(payload, offset, length);
-            }
-        }
-        assertResponseCode(uc);
-    }
-
-    protected void assertResponseCode(final HttpURLConnection uc) throws IOException {
-        if (hasFailed(uc)) {
-            handleFailedResponse(uc);
-        }
-    }
-
-    protected void handleFailedResponse(final HttpURLConnection uc) throws IOException {
-        throw new IOException(uc.getResponseMessage());
-    }
-
-    protected boolean hasFailed(final HttpURLConnection uc) throws IOException {
-        return uc.getResponseCode() >= 400;
+    public <T> T signedExecute(final String method, final URL url, RequestWriter requestWriter, ResponseReader<T> reader, Map<String, String> headers) throws IOException {
+        return super.execute(method, url, new SigningRequestWriter(requestWriter, signer), reader, headers);
     }
 
     /**
@@ -85,4 +57,28 @@ public class AWSClient {
     protected String getRegion() {
         return signer.getRegionProvider().getRegion();
     }
+
+    static class SigningRequestWriter implements RequestWriter {
+        private final RequestWriter requestWriter;
+        private final AWS4Signer signer;
+
+        public SigningRequestWriter(RequestWriter requestWriter, AWS4Signer signer) {
+            this.requestWriter = requestWriter;
+            this.signer = signer;
+        }
+
+        @Override
+        public void write(HttpURLConnection uc) throws IOException {
+            if (requestWriter != null) {
+                final MockHttpURLConnection mockHttpURLConnection = new MockHttpURLConnection(uc.getURL());
+                requestWriter.write(mockHttpURLConnection);
+                final byte[] bytes = mockHttpURLConnection.getBytes();
+                signer.signHeaders(uc, bytes);
+                uc.getOutputStream().write(bytes);
+            } else {
+                signer.signHeaders(uc, null);
+            }
+        }
+    }
+
 }

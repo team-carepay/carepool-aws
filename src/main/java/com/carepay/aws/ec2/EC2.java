@@ -5,30 +5,24 @@ import java.net.HttpURLConnection;
 import java.net.URL;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 import com.carepay.aws.AWSClient;
 import com.carepay.aws.auth.AWS4Signer;
-import com.carepay.aws.s3.XPathNodeListResponseHandler;
-import com.carepay.aws.s3.XPathStringResponseHandler;
-import com.carepay.aws.util.URLOpener;
-import org.w3c.dom.Element;
-import org.w3c.dom.NodeList;
-
-import static com.carepay.aws.util.DomUtils.getElement;
-import static java.nio.charset.StandardCharsets.UTF_8;
+import com.carepay.aws.net.FormUrlEncodedRequestWriter;
+import com.carepay.aws.net.URLOpener;
+import com.carepay.aws.net.XmlResponseReader;
+import com.carepay.aws.util.JsonParser;
 
 /**
  * Provides access to Amazon AWS API for Elastic Compute Cloud (EC2). Used to describe instances.
  */
 public class EC2 extends AWSClient {
 
-    private static final XPathStringResponseHandler ERROR_MESSAGE_RESPONSE_HANDLER = new XPathStringResponseHandler("/Response/Errors/Error/Message");
-    /**
-     * parameters for describe tags command
-     */
-    private static final String DESCRIBE_TAGS_PARAMS = "Action=DescribeTags&Version=2016-11-15&Filter.1.Name=resource-id&Filter.1.Value.1=";
+    @SuppressWarnings("java:S1313")
+    public static final URL META_DATA_URL = URLOpener.create("http://169.254.169.254/latest/dynamic/instance-identity/document");
 
-    private static final XPathNodeListResponseHandler ITEM_RESPONSE_HANDLER = new XPathNodeListResponseHandler("/ec2:DescribeTagsResponse/ec2:tagSet/ec2:item");
+    private JsonParser parser = new JsonParser();
 
     public EC2() {
         this(new AWS4Signer("ec2"), new URLOpener.Default());
@@ -40,25 +34,25 @@ public class EC2 extends AWSClient {
 
     @SuppressWarnings("unchecked")
     public Map<String, String> describeTags(final String instanceId) throws IOException {
-        final byte[] payLoad = (DESCRIBE_TAGS_PARAMS + instanceId).getBytes(UTF_8);
-        final URL url = new URL("https://ec2." + getRegion() + ".amazonaws.com");
-        final NodeList items = execute(url, "POST", payLoad, 0, payLoad.length, ITEM_RESPONSE_HANDLER);
-        return collectTags(items);
+        final Map<String, String> params = new HashMap<>();
+        params.put("Action", "DescribeTags");
+        params.put("Version", "2016-11-15");
+        params.put("Filter.1.Name", "resource-id");
+        params.put("Filter.1.Value.1", instanceId);
+        final URL url = new URL("https://ec2." + getRegion() + ".amazonaws.com/");
+        final DescribeTagsResponse response = super.signedExecute("POST", url, new FormUrlEncodedRequestWriter(params), new XmlResponseReader<>(DescribeTagsResponse.class), null);
+        return response.getTagSet().stream().collect(Collectors.toMap(Tag::getKey, Tag::getValue));
     }
 
-    protected Map<String, String> collectTags(final NodeList items) {
-        final Map<String, String> tags = new HashMap<>();
-        for (int i = 0; i < items.getLength(); i++) {
-            final Element item = (Element) items.item(i);
-            final String key = getElement(item, "key");
-            final String value = getElement(item, "value");
-            tags.put(key, value);
-        }
-        return tags;
+    public EC2MetaData queryMetaData() throws IOException {
+        return super.execute("GET", META_DATA_URL, null, uc -> parser.parse(uc.getInputStream(), EC2MetaData.class), null);
     }
 
     @Override
     protected void handleFailedResponse(final HttpURLConnection uc) throws IOException {
-        throw new IOException(ERROR_MESSAGE_RESPONSE_HANDLER.extract(uc));
+        final XmlResponseReader<ErrorResponse> reader = new XmlResponseReader<>(ErrorResponse.class);
+        final ErrorResponse errorResponse = reader.read(uc);
+        final String message = errorResponse.getErrors().stream().findFirst().map(Error::getMessage).orElse(uc.getResponseMessage());
+        throw new IOException(message);
     }
 }

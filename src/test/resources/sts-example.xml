@@ -1,0 +1,38 @@
+<AssumeRoleWithWebIdentityResponse xmlns="https://sts.amazonaws.com/doc/2011-06-15/">
+    <AssumeRoleWithWebIdentityResult>
+        <Audience>sts.amazonaws.com</Audience>
+        <AssumedRoleUser>
+            <AssumedRoleId>
+                AROAYNO6B5XMOCNNYIHDR:botocore-session-1661345121
+            </AssumedRoleId>
+            <Arn>
+                arn:aws:sts::578675666392:assumed-role/irsa-test-role/botocore-session-1661345121
+            </Arn>
+        </AssumedRoleUser>
+        <Provider>
+            arn:aws:iam::578675666392:oidc-provider/oidc.eks.eu-west-1.amazonaws.com/id/7ED19169FD8B01851C6DCAD9354694AB
+        </Provider>
+        <Credentials>
+            <AccessKeyId>
+                AMYSECRETKEYIDNOBODY
+            </AccessKeyId>
+            <SecretAccessKey>
+                10EacZDvZ8rtr3+RS7DkoH4Eb6lydr2oo4MiYubo
+            </SecretAccessKey>
+            <SessionToken>
+                IQoJb3JpZ2luX2VjEC0aCWV1LXdlc3QtMSJHMEUCIH7VmyIzC6kE8Bg3WvRsKZJfWnNPHE7YZPfj6TjcdsiKAiEAqdZkdi44LwKKytDpOEg1HsLud06DjkHzCdMvoVUFWeMq/wQIpv//////////ARAAGgw1Nzg2NzU2NjYzOTIiDG64cUKdyLOQegihdirTBJabOUXpqmGDCQmaDXcwExZUWQHOs8UTEqNjFNtnpV1mOrjpd5YJJHNdKLEvXaLXBT7okHl7Gac5q5PaHvf8nCheH4IoVDKc/DNNXnDnZI8KwCTXAhnJiaobU7Mto3TrWTwzAgLdySB8S7lOXQWE5xqad8SlnYgnv4/1MhcpO1LmNIKeNEKo2m+cWXexUb1i5JStZs2EmqeAyocyLu22gN7bwXfdwtnTGx6NpQA7QrKc7gJObjVzK/bXyXsB7Tnt6BPXD/ZDTlYRYqBDJhkYdufvocczV4rUvEUdNdX8AdIJ04JTd0ifZnMVPCLBIXH9U2aNtlA67Y5PWUZsidf/920wy/BkQI5Bi7xm5zH1ybQBw72lx+b0xJWBl5Y4bEZnVXpqoWUacBxrCoOzGlVWfprfTcoWECRYZPMup5ca4xnbcrbLr5r2dgO9Uaz/4ReTQqaSnjat7A3aN1MWM/icO3JyrRCFROZl7TmoF8QsDeqDEJxQbYoVemCK5AJyizQbCXLSx67gncG/1aebyvYy8nHqt5pCdBDnZvlf581IfhiqfMpxl9c3OBMIFIkJo/ETFT0ywymdUyy4l25xYf9ObUBcfgTzAZNVa7sDtVI7Y+YgzWXGURW1gC8whzDsduQebm1UNHmq87ImUiCjcoPK1xwvqG/N5uUTtptdSC7hPjACQwK4VC9+BBlTFuNBM4AI43NKBsuhkDvlQ1G//hep4f2RaahLxxuF1V17gbtdVchRpSLvo+RsQvOHsUWLj+u3cDdT/PZCrVcPIrAYwbpiWDoA7NIw4bqYmAY6mgHZhjRQ/drf+Ej1jDTu6+K/6wLruBK7VVL5ldgWhAazheTbvBOUfU0oe2h2QooYUq1RxjF5UFLJGiqFhNcdIxFtZOAZqzLocrY63lJj0Utxhpmma3kaZ3u7SPoRQtaJmBhgI51EK4XtvRW3oIkoZW/Ml4zmDcFR2M/BuPxh7WqsuGUuOgpkhi/CwHiLvibfehrIQjGCY2ACQ3qX
+            </SessionToken>
+            <Expiration>
+                2022-08-24T13:45:21Z
+            </Expiration>
+        </Credentials>
+        <SubjectFromWebIdentityToken>
+            system:serviceaccount:default:test
+        </SubjectFromWebIdentityToken>
+    </AssumeRoleWithWebIdentityResult>
+
+    <ResponseMetadata>
+        <RequestId>aec5ba3a-a9ed-4edd-8562-209841a15205</RequestId>
+    </ResponseMetadata>
+
+</AssumeRoleWithWebIdentityResponse>

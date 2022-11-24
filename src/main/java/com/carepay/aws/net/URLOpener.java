@@ -1,4 +1,4 @@
-package com.carepay.aws.util;
+package com.carepay.aws.net;
 
 import java.io.IOException;
 import java.net.HttpURLConnection;
@@ -12,6 +12,7 @@ import java.net.URL;
 @FunctionalInterface
 public interface URLOpener {
     HttpURLConnection open(URL url) throws IOException;
+
     static URL create(String url) {
         try {
             return new URL(url);

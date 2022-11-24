@@ -6,9 +6,9 @@ import java.util.Collections;
 import java.util.Map;
 import java.util.Optional;
 
+import com.carepay.aws.net.URLOpener;
 import com.carepay.aws.util.Env;
 import com.carepay.aws.util.IniFile;
-import com.carepay.aws.util.URLOpener;
 
 /**
  * Credentials provider which supports the profile stored in the `.aws` folder in the homedir.
@@ -23,10 +23,9 @@ public class ProfileCredentialsProvider implements CredentialsProvider {
     private final Env env;
     private final Clock clock;
     private final URLOpener opener;
-    private Credentials lastCredentials;
 
     public ProfileCredentialsProvider() {
-        this(new File(new File(System.getProperty(USER_HOME)), AWS_CONFIG_FILENAME), new Env.Default(), Clock.systemDefaultZone(), new URLOpener.Default());
+        this(new File(new File(System.getProperty(USER_HOME)), AWS_CONFIG_FILENAME), new Env.Default(), Clock.systemUTC(), new URLOpener.Default());
     }
 
     public ProfileCredentialsProvider(final File file, final Env env, final Clock clock, final URLOpener opener) {
@@ -38,17 +37,10 @@ public class ProfileCredentialsProvider implements CredentialsProvider {
 
     @Override
     public Credentials getCredentials() {
-        if (hasCachedCredentials()) {
-            final String profileName = Optional.ofNullable(env.getEnv(AWS_PROFILE))
-                    .orElseGet(() -> Optional.ofNullable(System.getProperty("aws.profile")).orElse(DEFAULT));
-            final Map<String, String> section = getIniFileSection(profileName);
-            lastCredentials = getDelegateCredentialsProvider(profileName, section).getCredentials();
-        }
-        return lastCredentials;
-    }
-
-    private boolean hasCachedCredentials() {
-        return lastCredentials == null || (lastCredentials.getExpiration() != null && lastCredentials.getExpiration().isBefore(clock.instant()));
+        final String profileName = Optional.ofNullable(env.getEnv(AWS_PROFILE))
+                .orElseGet(() -> Optional.ofNullable(System.getProperty("aws.profile")).orElse(DEFAULT));
+        final Map<String, String> section = getIniFileSection(profileName);
+        return getDelegateCredentialsProvider(profileName, section).getCredentials();
     }
 
     private Map<String, String> getIniFileSection(String profileName) {

@@ -7,11 +7,15 @@ import java.net.HttpURLConnection;
 import java.net.URL;
 import java.time.Clock;
 import java.time.Instant;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 import com.carepay.aws.auth.AWS4Signer;
 import com.carepay.aws.auth.Credentials;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.time.ZoneOffset.UTC;
@@ -199,5 +203,33 @@ public class S3Test {
         assertThatThrownBy(() -> s3.finishMultipart(uploadId))
                 .isInstanceOf(IOException.class)
                 .hasMessageContaining("xml");
+    }
+
+    @Test
+    void testPutObjectWithSessionToken() throws IOException {
+        AWS4Signer signer = new S3AWS4Signer(() -> new Credentials("AKIDEXAMPLE", "wJalrXUtnFEMI/K7MDENG+bPxRfiCYEXAMPLEKEY", "SeSsIoNtOkEn"), () -> "us-east-1", CLOCK);
+        s3 = new S3(signer, (u) -> urlConnection);
+        when(urlConnection.getResponseCode()).thenReturn(200);
+        when(urlConnection.getRequestMethod()).thenReturn("PUT");
+        when(urlConnection.getInputStream()).thenReturn(new ByteArrayInputStream(new byte[]{0x01}));
+        ArgumentCaptor<String> keyCaptor = ArgumentCaptor.forClass(String.class);
+        ArgumentCaptor<String> valueCaptor = ArgumentCaptor.forClass(String.class);
+        signer.signHeaders(urlConnection, null);
+        verify(urlConnection, times(6)).setRequestProperty(keyCaptor.capture(), valueCaptor.capture());
+
+        s3.putObject("testbucket", "testkey.png", new byte[]{0x01, 0x02, 0x03, (byte) 0x81}, 0, 4);
+        assertThat(outputStream.toByteArray()).hasSize(4);
+
+        List<String> keys = keyCaptor.getAllValues();
+        List<String> values = valueCaptor.getAllValues();
+        Map<String, String> headers = new HashMap<>();
+        for (int n = 0; n < keys.size(); n++) {
+            headers.put(keys.get(n), values.get(n));
+        }
+        assertThat(headers)
+                .containsEntry("X-Amz-Date", "20150830T123600Z")
+//                .containsEntry("Authorization", "AWS4-HMAC-SHA256 Credential=AKIDEXAMPLE/20150830/us-east-1/s3/aws4_request, SignedHeaders=host;x-amz-date;x-amz-security-token, Signature=46017ea110dc97ea1adbd4292f6516462fdf438fe9135884d0b0492e9f67ac26")
+                .containsEntry("Authorization", "AWS4-HMAC-SHA256 Credential=AKIDEXAMPLE/20150830/us-east-1/s3/aws4_request, SignedHeaders=host;x-amz-content-sha256;x-amz-date;x-amz-security-token, Signature=4fac975d56596cb557429f107e6923785b30ada8617170dd5df05230c5e8e861")
+                .containsEntry("X-Amz-Security-Token", "SeSsIoNtOkEn");
     }
 }

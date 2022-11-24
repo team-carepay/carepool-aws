@@ -1,4 +1,4 @@
-package com.carepay.aws.util;
+package com.carepay.aws.net;
 
 import java.net.URL;
 import java.util.BitSet;
@@ -57,6 +57,19 @@ public final class QueryStringUtils {
         return map.entrySet()
                 .stream()
                 .map(e -> uriEncode(e.getKey()) + "=" + uriEncode(e.getValue()))
+                .collect(Collectors.joining("&"));
+    }
+
+    /**
+     * Convert a Map to QueryString format
+     *
+     * @param map the map
+     * @return the Query String (URL Encoded)
+     */
+    public static String toQueryPathString(final Map<String, String> map) {
+        return map.entrySet()
+                .stream()
+                .map(e -> uriEncodePath(e.getKey()) + "=" + uriEncodePath(e.getValue()))
                 .collect(Collectors.joining("&"));
     }
 

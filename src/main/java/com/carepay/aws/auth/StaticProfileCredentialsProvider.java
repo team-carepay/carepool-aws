@@ -23,10 +23,10 @@ public class StaticProfileCredentialsProvider implements CredentialsProvider {
     public Credentials getCredentials() {
         final IniFile iniFile = new IniFile(credentialsFile);
         final Map<String, String> section = Optional.ofNullable(
-                iniFile.getSection(profileName))
+                        iniFile.getSection(profileName))
                 .orElseGet(
                         () -> Optional.ofNullable(
-                                iniFile.getSection("default"))
+                                        iniFile.getSection("default"))
                                 .orElse(Collections.emptyMap())
                 );
 
