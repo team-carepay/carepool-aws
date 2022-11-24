@@ -1,8 +1,6 @@
 package com.carepay.aws.s3;
 
-import java.net.HttpURLConnection;
 import java.time.Clock;
-import java.util.function.Consumer;
 
 import com.carepay.aws.auth.AWS4Signer;
 import com.carepay.aws.auth.CredentialsProvider;
@@ -18,12 +16,17 @@ public class S3AWS4Signer extends AWS4Signer {
     }
 
     @Override
-    public void signHeaders(HttpURLConnection uc, byte[] payload, int offset, int length) {
-        super.signHeaders(uc, null, 0, -1); // set payload to null to ensure unsigned payload
+    protected String calculateContentSha256(byte[] payload, int offset, int length) {
+        return UNSIGNED_PAYLOAD;
     }
 
     @Override
-    protected Consumer<String> getAddSecurityTokenFunction(SignRequest signRequest) {
-        return signRequest::addSecurityTokenToSignedHeaders;
+    public boolean isSecurityTokenSigned() {
+        return true;
+    }
+
+    @Override
+    public boolean isContentSha256Signed() {
+        return true;
     }
 }

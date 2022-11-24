@@ -1,6 +1,6 @@
 package com.carepay.aws.auth;
 
-import com.carepay.aws.ec2.EC2CredentialsProvider;
+import java.time.Clock;
 
 /**
  * Default implementation of AWS credentials providers. Searches for credentials in the following
@@ -11,15 +11,20 @@ public class DefaultCredentialsProviderChain implements CredentialsProvider {
     private static final CredentialsProvider INSTANCE = new DefaultCredentialsProviderChain();
     private final CredentialsProvider[] providers;
 
+    private final Clock clock;
+    private Credentials cachedCredentials;
+
     public DefaultCredentialsProviderChain() {
-        this(new EnvironmentCredentialsProvider(),
+        this(Clock.systemUTC(), new EnvironmentCredentialsProvider(),
                 new SystemPropertyCredentialsProvider(),
+                new WebIdentityTokenCredentialsProvider(),
                 new ProfileCredentialsProvider(),
                 new EC2CredentialsProvider()
         );
     }
 
-    public DefaultCredentialsProviderChain(CredentialsProvider... providers) {
+    public DefaultCredentialsProviderChain(final Clock clock, final CredentialsProvider... providers) {
+        this.clock = clock;
         this.providers = providers;
     }
 
@@ -29,9 +34,13 @@ public class DefaultCredentialsProviderChain implements CredentialsProvider {
 
     @Override
     public Credentials getCredentials() {
+        if (cachedCredentials != null && (cachedCredentials.getExpiration() == null || cachedCredentials.getExpiration().isAfter(clock.instant()))) {
+            return cachedCredentials;
+        }
         for (CredentialsProvider provider : providers) {
             Credentials credentials = provider.getCredentials();
             if (credentials != null && credentials.isPresent()) {
+                cachedCredentials = credentials;
                 return credentials;
             }
         }

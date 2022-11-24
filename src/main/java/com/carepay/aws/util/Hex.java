@@ -6,6 +6,7 @@ public final class Hex {
     private Hex() {
         throw new IllegalStateException();
     }
+
     /**
      * HEX encode an array of bytes to lowercase hex string.
      *

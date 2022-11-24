@@ -10,6 +10,7 @@ import com.carepay.aws.ec2.EC2RegionProvider;
 public class DefaultRegionProviderChain implements RegionProvider {
     private static final RegionProvider INSTANCE = new DefaultRegionProviderChain();
     private final RegionProvider[] providers;
+    private String region;
 
     public DefaultRegionProviderChain() {
         this(new EnvironmentRegionProvider(),
@@ -28,12 +29,14 @@ public class DefaultRegionProviderChain implements RegionProvider {
 
     @Override
     public String getRegion() {
-        for (RegionProvider p : providers) {
-            final String region = p.getRegion();
-            if (region != null) {
-                return region;
+        if (region == null) {
+            for (RegionProvider provider : providers) {
+                region = provider.getRegion();
+                if (region != null) {
+                    break;
+                }
             }
         }
-        return null;
+        return region;
     }
 }

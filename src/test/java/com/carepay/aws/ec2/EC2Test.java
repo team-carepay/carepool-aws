@@ -1,5 +1,6 @@
 package com.carepay.aws.ec2;
 
+import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.net.HttpURLConnection;
@@ -60,4 +61,30 @@ public class EC2Test {
                 .isInstanceOf(IOException.class)
                 .hasMessage("test");
     }
+
+    @Test
+    public void testGetInstanceId() throws IOException {
+        HttpURLConnection uc = mock(HttpURLConnection.class);
+        when(uc.getInputStream()).thenReturn(getClass().getResourceAsStream("/metadata.json"));
+        EC2 ec2 = new EC2(mock(AWS4Signer.class), url -> uc);
+        assertThat(ec2.queryMetaData().getInstanceId()).isEqualTo("i-05c52026d927fee31");
+    }
+
+    @Test
+    public void testQueryMetadataIOException() throws IOException {
+        HttpURLConnection uc = mock(HttpURLConnection.class);
+        when(uc.getInputStream()).thenThrow(new IOException("test"));
+        EC2 ec2 = new EC2(mock(AWS4Signer.class), url -> uc);
+        assertThatThrownBy(() -> ec2.queryMetaData().getInstanceId()).isInstanceOf(IOException.class);
+    }
+
+    @Test
+    public void testQueryMetadataError() throws IOException {
+        HttpURLConnection uc = mock(HttpURLConnection.class);
+        when(uc.getErrorStream()).thenReturn(new ByteArrayInputStream(new byte[]{}));
+        when(uc.getResponseCode()).thenReturn(400);
+        EC2 ec2 = new EC2(mock(AWS4Signer.class), url -> uc);
+        assertThatThrownBy(() -> ec2.queryMetaData().getInstanceId()).isInstanceOf(IOException.class);
+    }
+
 }

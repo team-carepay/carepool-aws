@@ -1,4 +1,4 @@
-package com.carepay.aws.util;
+package com.carepay.aws.net;
 
 import java.net.MalformedURLException;
 import java.net.URL;
@@ -41,10 +41,19 @@ public class QueryStringUtilsTest {
     @Test
     public void uriEncodePath() {
         assertThat(QueryStringUtils.uriEncodePath("/test/bla")).isEqualTo("/test/bla");
+        assertThat(QueryStringUtils.uriEncodePath("/test/bla/\0100")).isEqualTo("/test/bla/%080");
     }
 
     @Test
     public void uriDecode() {
         assertThat(QueryStringUtils.uriDecode("%09-_~.%0A%E2%82%AC%2F")).isEqualTo("\t-_~.\n€/");
+    }
+
+    @Test
+    void getHostname() {
+        String host = QueryStringUtils.getHostname(URLOpener.create("https://host.com/path?a=b&c=d"));
+        assertThat(host).isEqualTo("host.com");
+        host = QueryStringUtils.getHostname(URLOpener.create("https://host.com:8443/path?a=b&c=d"));
+        assertThat(host).isEqualTo("host.com:8443");
     }
 }

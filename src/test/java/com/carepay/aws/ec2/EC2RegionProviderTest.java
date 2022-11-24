@@ -2,6 +2,7 @@ package com.carepay.aws.ec2;
 
 import java.net.HttpURLConnection;
 
+import com.carepay.aws.auth.AWS4Signer;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -18,8 +19,8 @@ public class EC2RegionProviderTest {
     public void setUp() throws Exception {
         uc = mock(HttpURLConnection.class);
         when(uc.getInputStream()).thenReturn(getClass().getResourceAsStream("/metadata.json"));
-        EC2MetaData ec2metadata = new EC2MetaData(new ResourceFetcher(url -> uc));
-        provider = new EC2RegionProvider(ec2metadata);
+        EC2 ec2 = new EC2(mock(AWS4Signer.class), url -> uc);
+        provider = new EC2RegionProvider(ec2);
     }
 
     @Test
